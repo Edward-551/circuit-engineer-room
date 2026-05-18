@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>抵抗計算をExcelではなくWebツール化した理由 | 回路エンジニアの部屋</title>
+  <meta name="description" content="抵抗の直列・並列計算をExcelではなくWebツール化した理由や、実際に感じた使いやすさをまとめた記事。">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="site-header" id="siteHeader">
+    <div class="container header-inner">
+      <a class="logo" href="./index.html">回路エンジニアの部屋</a>
+      <nav class="nav" aria-label="グローバルナビゲーション">
+        <a href="./index.html">ホーム</a>
+        <a href="./tools.html">ツール</a>
+        <a href="./articles.html">記事</a>
+        <a href="./index.html#about">このサイトについて</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container narrow">
+        <p class="hero-label">Article</p>
+        <nav class="meta" aria-label="パンくず">
+          <a href="./index.html">ホーム</a>
+          <span> / </span>
+          <a href="./articles.html">記事一覧</a>
+          <span> / </span>
+          <span>抵抗計算をExcelではなくWebツール化した理由</span>
+        </nav>
+        <h1>抵抗計算をExcelではなくWebツール化した理由</h1>
+        <p class="hero-text">
+          抵抗の直列・並列計算を日常的に扱う中で、
+          Excelよりもブラウザですぐ使える形にしたくなった理由を整理した記事です。
+        </p>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container narrow">
+        <article class="about-box article-box">
+          <p class="meta">2026-04-06 / Article</p>
+
+          <p>
+            抵抗の直列・並列計算や、各抵抗の両端電圧、電流、消費電力の確認は、
+            これまでExcelで計算することが多かった。
+          </p>
+
+          <p>
+            ただ、実際に使っていると、抵抗を1本追加したいときや、
+            途中の構成を少し変えたいときに、表や数式を直すのが地味に面倒だった。
+            抵抗本数が増えるほど、あとから調整しにくくなることも多い。
+          </p>
+
+          <h2>Excelで不便だったところ</h2>
+          <p>
+            Excelは自由度が高く、一覧性もあるので便利ではある。
+            その一方で、回路構成を変えるたびにセル参照や計算式の整合を気にする必要があり、
+            「ちょっと試したいだけ」のときほど手間を感じやすかった。
+          </p>
+
+          <p>
+            特に、直列ブロックと並列ブロックを混ぜた構成を扱うと、
+            途中で抵抗を追加・削除するだけでも見直す場所が増えてしまう。
+            そのたびに表を整えるのは、確認作業としては少し重かった。
+          </p>
+
+          <h2>Webツール化したかったこと</h2>
+          <p>
+            欲しかったのは、回路をあとから組み替えてもすぐ計算し直せること、
+            そして各抵抗の値を一覧で見やすく確認できることだった。
+          </p>
+
+          <p>
+            そのため、ブロックを追加しながら構成を作れて、
+            各抵抗の電圧、電流、消費電力が自動でまとまる形を目指した。
+            ブラウザで開くだけで使えるようにしておけば、
+            家でも別のPCでも同じように使いやすいのも利点だった。
+          </p>
+
+          <h2>実際に作ってよかったこと</h2>
+          <p>
+            実際にページとして作ってみると、
+            「まず計算したい」というときにすぐ触れるようになった。
+            ファイルを開いてすぐ試せるので、Excelの表を複製して整えるより気持ちが軽い。
+          </p>
+
+          <p>
+            また、自分用ツールとして始めたものでも、
+            Webページとしてまとめると後から見返しやすく、
+            他のツールや記事にもつなげやすいと感じた。
+          </p>
+
+          <h2>今後追加したいこと</h2>
+          <p>
+            今後は、抵抗の定格確認やシリーズ管理、
+            よく使う条件の保存なども追加していきたい。
+            さらに、考え方や使い方を記事として残しておくことで、
+            単なる計算ページではなく、メモとツールを行き来できる形にしていきたい。
+          </p>
+
+          <p>
+            ツール本体は以下のページに置いている。
+          </p>
+
+          <p>
+            <a class="card-link" href="./tool-resistor.html">抵抗ネットワーク計算ツールを見る</a>
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container narrow">
+        <div class="update-panel">
+          <p class="section-kicker">Next</p>
+          <h2>あわせて見たいページ</h2>
+          <ul class="update-list">
+            <li><a class="card-link" href="./tool-resistor.html">抵抗ネットワーク計算ツール</a></li>
+            <li><a class="card-link" href="./tools.html">ツール一覧</a></li>
+            <li><a class="card-link" href="./articles.html">記事一覧</a></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p>© <span id="currentYear"></span> 回路エンジニアの部屋</p>
+    </div>
+  </footer>
+
+  <script src="./script.js"></script>
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>抵抗ネットワーク計算ツール | 回路エンジニアの部屋</title>
+  <meta name="description" content="直列・並列ブロックを追加しながら、各抵抗の電圧・電流・消費電力をまとめて計算できる抵抗ネットワーク計算ツール。">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="site-header" id="siteHeader">
+    <div class="container header-inner">
+      <a class="logo" href="./index.html">回路エンジニアの部屋</a>
+      <nav class="nav" aria-label="グローバルナビゲーション">
+        <a href="./index.html">ホーム</a>
+        <a href="./tools.html">ツール</a>
+        <a href="./articles.html">記事</a>
+        <a href="./index.html#about">このサイトについて</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <p class="hero-label">Tool</p>
+
+        <nav class="meta" aria-label="パンくず">
+          <a href="./index.html">ホーム</a>
+          <span> / </span>
+          <a href="./tools.html">ツール一覧</a>
+          <span> / </span>
+          <span>抵抗ネットワーク計算ツール</span>
+        </nav>
+
+        <h1>抵抗ネットワーク計算ツール</h1>
+        <p class="hero-text">
+          直列・並列ブロックを追加しながら、
+          各抵抗の両端電圧、電流、消費電力をまとめて確認できるツールです。
+        </p>
+
+        <div class="hero-tags" aria-label="ツール機能">
+          <span>直列・並列対応</span>
+          <span>電圧指定 / 電流指定</span>
+          <span>CSV出力</span>
+          <span>JSON保存・読込</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="tool-wrap">
+          <div class="tool-grid">
+            <section class="card">
+              <div class="section-head" style="margin-bottom: 20px;">
+                <div>
+                  <p class="section-kicker">Input</p>
+                  <h2>入力条件</h2>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="field col-4">
+                  <label for="sourceMode">電源条件</label>
+                  <select id="sourceMode">
+                    <option value="voltage">全体電圧を指定</option>
+                    <option value="current">全体電流を指定</option>
+                  </select>
+                </div>
+
+                <div class="field col-4">
+                  <label for="sourceValue">値</label>
+                  <input id="sourceValue" type="number" step="any" value="12">
+                </div>
+
+                <div class="field col-4">
+                  <label for="sourceUnit">単位</label>
+                  <input id="sourceUnit" type="text" value="V" disabled>
+                </div>
+              </div>
+
+              <div class="row">
+                <div class="field col-4">
+                  <label for="newType">追加するブロック</label>
+                  <select id="newType">
+                    <option value="series">直列ブロック</option>
+                    <option value="parallel">並列ブロック</option>
+                  </select>
+                </div>
+
+                <div class="field col-4">
+                  <label for="newName">ブロック名</label>
+                  <input id="newName" type="text" value="Block 1">
+                </div>
+
+                <div class="field col-4">
+                  <label for="newValues">抵抗値 [Ω]</label>
+                  <input id="newValues" type="text" value="10, 20, 30">
+                </div>
+              </div>
+
+              <div class="buttons">
+                <button id="addBlockBtn">ブロック追加</button>
+                <button id="sampleBtn" class="secondary">サンプル読込</button>
+                <button id="exportCsvBtn" class="secondary">CSV出力</button>
+                <button id="saveJsonBtn" class="secondary">JSON保存</button>
+                <button id="loadJsonBtn" class="secondary">JSON読込</button>
+                <button id="clearBtn" class="danger">全消去</button>
+              </div>
+
+              <input id="jsonFileInput" type="file" accept=".json,application/json" style="display: none;">
+
+              <div id="networkList" class="network-list"></div>
+
+              <p class="note">
+                ・全体は「ブロック同士が直列接続」の構成です。<br>
+                ・直列ブロック内は同一電流、並列ブロック内は同一電圧で計算します。
+              </p>
+            </section>
+
+            <section class="card">
+              <div class="section-head" style="margin-bottom: 20px;">
+                <div>
+                  <p class="section-kicker">Result</p>
+                  <h2>計算結果</h2>
+                </div>
+              </div>
+
+              <div id="resultSummary" class="summary"></div>
+              <div id="resultMessage"></div>
+              <div id="resultTable"></div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container narrow">
+        <div class="about-box">
+          <p class="section-kicker">Notes</p>
+          <h2>このツールについて</h2>
+          <p>
+            Excelで抵抗回路を都度組み替えて計算するのが面倒だったため、
+            ブラウザ上で直感的に扱える形を目指して作ったツールです。
+          </p>
+          <p>
+            抵抗を追加・削除しながらすぐ再計算できるので、
+            条件を少しずつ変えて確認したいときに使いやすくしています。
+          </p>
+          <p>
+            <a class="card-link" href="./article-001.html">このツールを作った理由の記事を見る</a>
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p>© <span id="currentYear"></span> 回路エンジニアの部屋</p>
+    </div>
+  </footer>
+
+  <script src="./script.js"></script>
+  <script src="./tool-resistor.js"></script>
+</body>
+</html>

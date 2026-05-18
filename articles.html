@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>記事一覧 | 回路エンジニアの部屋</title>
+  <meta name="description" content="電源設計・電子回路に関する記事一覧。抵抗計算ツール化の記録、PFC・LLC評価メモ、部品選定メモなどを順次追加予定。">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="site-header" id="siteHeader">
+    <div class="container header-inner">
+      <a class="logo" href="./index.html">回路エンジニアの部屋</a>
+      <nav class="nav" aria-label="グローバルナビゲーション">
+        <a href="./index.html">ホーム</a>
+        <a href="./tools.html">ツール</a>
+        <a href="./articles.html">記事</a>
+        <a href="./index.html#about">このサイトについて</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <p class="hero-label">Articles</p>
+        <h1>記事一覧</h1>
+        <p class="hero-text">
+          電源設計や電子回路の評価で考えたこと、作ったツールの背景、
+          あとで見返したい実務メモなどを少しずつ整理していくページです。
+        </p>
+
+        <div class="hero-tags" aria-label="記事テーマ">
+          <span>設計メモ</span>
+          <span>PFC / LLC</span>
+          <span>部品選定</span>
+          <span>測定・評価</span>
+          <span>ツール作成記録</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Article List</p>
+            <h2>公開中 / 追加予定の記事</h2>
+          </div>
+        </div>
+
+        <div class="card-grid">
+          <article class="card">
+            <div class="card-top">
+              <p class="meta">2026-04-06</p>
+              <span class="status-badge live">公開中</span>
+            </div>
+            <h3>抵抗計算をExcelではなくWebツール化した理由</h3>
+            <p>
+              抵抗を追加・削除するたびに表を直すのが面倒で、
+              自分用の計算ページとしてWeb化したくなった経緯をまとめた記事です。
+            </p>
+            <a class="card-link" href="./article-001.html">記事を読む</a>
+          </article>
+
+          <article class="card">
+            <div class="card-top">
+              <p class="meta">2026-04-07</p>
+              <span class="status-badge live">公開中</span>
+            </div>
+            <h3>抵抗ネットワーク計算で見落としやすいポイント</h3>
+            <p>
+              合成抵抗だけで終わらせず、
+              各抵抗の電圧・電流・電力まで確認したいポイントを整理した記事です。
+            </p>
+            <a class="card-link" href="./article-002.html">記事を読む</a>
+          </article>
+
+          <article class="card is-coming">
+            <div class="card-top">
+              <p class="meta">準備中</p>
+              <span class="status-badge coming">準備中</span>
+            </div>
+            <h3>部品選定で迷いやすいところのメモ</h3>
+            <p>
+              抵抗、コンデンサ、FET、測定器など、
+              選定時に悩みやすいポイントを自分用メモとして整理する予定の記事です。
+            </p>
+            <a class="card-link is-disabled" href="./articles.html" data-coming-soon="true">準備中</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container narrow">
+        <div class="about-box">
+          <p class="section-kicker">Notes</p>
+          <h2>このページについて</h2>
+          <p>
+            記事は、実際に作業しながら気づいたことや、
+            後から見返したくなる内容を中心に追加していく予定です。
+          </p>
+          <p>
+            まずはツール作成の記録や、PFC / LLCまわりの評価メモ、
+            部品選定で迷いやすい点などを順番に整理していきます。
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p>© <span id="currentYear"></span> 回路エンジニアの部屋</p>
+    </div>
+  </footer>
+
+  <script src="./script.js"></script>
+</body>
+</html>

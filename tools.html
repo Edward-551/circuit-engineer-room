@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ツール一覧 | 回路エンジニアの部屋</title>
+  <meta name="description" content="電源設計・電子回路に役立つ計算ツール一覧。抵抗ネットワーク計算、分圧計算、抵抗定格確認などを順次追加予定。">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="site-header" id="siteHeader">
+    <div class="container header-inner">
+      <a class="logo" href="./index.html">回路エンジニアの部屋</a>
+      <nav class="nav" aria-label="グローバルナビゲーション">
+        <a href="./index.html">ホーム</a>
+        <a href="./tools.html">ツール</a>
+        <a href="./articles.html">記事</a>
+        <a href="./index.html#about">このサイトについて</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <p class="hero-label">Tools</p>
+        <h1>ツール一覧</h1>
+        <p class="hero-text">
+          電源設計や電子回路の検討で繰り返し使う計算を、
+          すぐ確認できる形でまとめたツール置き場です。
+          抵抗計算、分圧計算、定格確認などを少しずつ追加していきます。
+        </p>
+
+        <div class="hero-tags" aria-label="公開内容">
+          <span>抵抗ネットワーク</span>
+          <span>分圧計算</span>
+          <span>定格確認</span>
+          <span>電源設計メモ</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">Available Tools</p>
+            <h2>公開中 / 追加予定のツール</h2>
+          </div>
+        </div>
+
+        <div class="card-grid">
+          <article class="card">
+            <div class="card-top">
+              <span class="status-badge live">公開中</span>
+            </div>
+            <h3>抵抗ネットワーク計算ツール</h3>
+            <p>
+              直列・並列の抵抗回路について、
+              各抵抗の両端電圧、電流、消費電力をまとめて確認するツールです。
+            </p>
+            <a class="card-link" href="./tool-resistor.html">ページを開く</a>
+          </article>
+
+          <article class="card is-coming">
+            <div class="card-top">
+              <span class="status-badge coming">準備中</span>
+            </div>
+            <h3>抵抗の定格確認ツール</h3>
+            <p>
+              抵抗シリーズや型式情報をもとに、
+              印加電圧や消費電力が仕様内に収まっているか確認するためのツールです。
+            </p>
+            <a class="card-link is-disabled" href="./tools.html" data-coming-soon="true">準備中</a>
+          </article>
+
+          <article class="card is-coming">
+            <div class="card-top">
+              <span class="status-badge coming">準備中</span>
+            </div>
+            <h3>分圧計算ツール</h3>
+            <p>
+              目標電圧に対する抵抗比の確認や、
+              候補抵抗値を考えるための簡易計算ツールです。
+            </p>
+            <a class="card-link is-disabled" href="./tools.html" data-coming-soon="true">準備中</a>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt">
+      <div class="container narrow">
+        <div class="about-box">
+          <p class="section-kicker">Memo</p>
+          <h2>このページについて</h2>
+          <p>
+            まずは自分が日常的に使いやすいことを優先して、
+            回路設計や評価でよく使う計算ツールを少しずつ追加しています。
+          </p>
+          <p>
+            今後は分圧計算、抵抗シリーズ選定、定格確認、
+            電源設計まわりの補助計算なども整理していく予定です。
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p>© <span id="currentYear"></span> 回路エンジニアの部屋</p>
+    </div>
+  </footer>
+
+  <script src="./script.js"></script>
+</body>
+</html>
