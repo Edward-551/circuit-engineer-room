@@ -44,6 +44,25 @@
         <article class="about-box article-box">
           <p class="meta">2026-04-06 / Article</p>
 
+          <div class="article-summary">
+            <h2>この記事で分かること</h2>
+            <ul>
+              <li>抵抗計算をExcelで管理すると不便になりやすい理由</li>
+              <li>Webツール化すると作業が楽になるポイント</li>
+              <li>計算ツールと記事を組み合わせるメリット</li>
+            </ul>
+          </div>
+
+          <div class="toc-box">
+            <strong>目次</strong>
+            <ol>
+              <li><a href="#excel">Excelで不便だったところ</a></li>
+              <li><a href="#webtool">Webツール化したかったこと</a></li>
+              <li><a href="#good">実際に作ってよかったこと</a></li>
+              <li><a href="#future">今後追加したいこと</a></li>
+            </ol>
+          </div>
+
           <p>
             抵抗の直列・並列計算や、各抵抗の両端電圧、電流、消費電力の確認は、
             これまでExcelで計算することが多かった。
@@ -55,7 +74,7 @@
             抵抗本数が増えるほど、あとから調整しにくくなることも多い。
           </p>
 
-          <h2>Excelで不便だったところ</h2>
+          <h2 id="excel">Excelで不便だったところ</h2>
           <p>
             Excelは自由度が高く、一覧性もあるので便利ではある。
             その一方で、回路構成を変えるたびにセル参照や計算式の整合を気にする必要があり、
@@ -68,7 +87,15 @@
             そのたびに表を整えるのは、確認作業としては少し重かった。
           </p>
 
-          <h2>Webツール化したかったこと</h2>
+          <div class="point-box">
+            <strong>ポイント</strong>
+            <p>
+              Excelは万能だけど、回路構成を頻繁に変える用途では、
+              セル参照や計算式の修正が手間になりやすいです。
+            </p>
+          </div>
+
+          <h2 id="webtool">Webツール化したかったこと</h2>
           <p>
             欲しかったのは、回路をあとから組み替えてもすぐ計算し直せること、
             そして各抵抗の値を一覧で見やすく確認できることだった。
@@ -81,7 +108,33 @@
             家でも別のPCでも同じように使いやすいのも利点だった。
           </p>
 
-          <h2>実際に作ってよかったこと</h2>
+          <div class="example-box">
+            <h2>Webツール化で楽にしたかった確認</h2>
+            <div class="example-grid">
+              <div class="example-item">
+                <span>確認1</span>
+                <strong>合成抵抗</strong>
+              </div>
+              <div class="example-item">
+                <span>確認2</span>
+                <strong>各抵抗の電圧</strong>
+              </div>
+              <div class="example-item">
+                <span>確認3</span>
+                <strong>消費電力</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="point-box">
+            <strong>ポイント</strong>
+            <p>
+              抵抗計算は、値そのものよりも「あとから条件を変えやすいか」が大事です。
+              Webツールにすると、抵抗の追加・削除や条件変更をすぐ試せます。
+            </p>
+          </div>
+
+          <h2 id="good">実際に作ってよかったこと</h2>
           <p>
             実際にページとして作ってみると、
             「まず計算したい」というときにすぐ触れるようになった。
@@ -94,7 +147,7 @@
             他のツールや記事にもつなげやすいと感じた。
           </p>
 
-          <h2>今後追加したいこと</h2>
+          <h2 id="future">今後追加したいこと</h2>
           <p>
             今後は、抵抗の定格確認やシリーズ管理、
             よく使う条件の保存なども追加していきたい。
@@ -102,13 +155,13 @@
             単なる計算ページではなく、メモとツールを行き来できる形にしていきたい。
           </p>
 
-          <p>
-            ツール本体は以下のページに置いている。
-          </p>
-
-          <p>
-            <a class="card-link" href="./tool-resistor.html">抵抗ネットワーク計算ツールを見る</a>
-          </p>
+          <div class="related-box">
+            <strong>関連ツール</strong>
+            <p>
+              抵抗値を変えながら、各抵抗の電圧・電流・消費電力を確認できます。
+            </p>
+            <a class="button primary" href="./tool-resistor.html">抵抗ネットワーク計算ツールを見る</a>
+          </div>
         </article>
       </div>
     </section>

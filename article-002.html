@@ -45,13 +45,55 @@
         <article class="about-box article-box">
           <p class="meta">2026-04-07 / Article</p>
 
+          <div class="article-summary">
+            <h2>この記事で分かること</h2>
+            <ul>
+              <li>合成抵抗だけで終わらせると危ない理由</li>
+              <li>直列・並列で確認すべき電圧・電流の違い</li>
+              <li>各抵抗の消費電力と定格確認の重要性</li>
+            </ul>
+          </div>
+
+          <div class="toc-box">
+            <strong>目次</strong>
+            <ol>
+              <li><a href="#total-resistance">合成抵抗だけで終わらせない</a></li>
+              <li><a href="#series">直列では電流が同じになる</a></li>
+              <li><a href="#parallel">並列では電圧が同じになる</a></li>
+              <li><a href="#rating">定格電力の確認を後回しにしない</a></li>
+              <li><a href="#node-voltage">途中の電位も見ておくと理解しやすい</a></li>
+              <li><a href="#summary">まとめ</a></li>
+            </ol>
+          </div>
+
           <p>
             抵抗回路の計算というと、まず合成抵抗を求めることが多い。
             もちろんそれは基本になるが、実際の確認ではそれだけで十分とは言えない。
+          </p>
+
+          <p>
             電源電圧や電流条件が決まれば、各抵抗にどれだけの電圧がかかり、
             どれだけ電流が流れ、どれだけ電力を消費するかまで見ておかないと、
             後で思わぬ見落としにつながることがある。
           </p>
+
+          <div class="example-box">
+            <h2>抵抗ネットワークで見たい3つの値</h2>
+            <div class="example-grid">
+              <div class="example-item">
+                <span>Voltage</span>
+                <strong>各抵抗の電圧</strong>
+              </div>
+              <div class="example-item">
+                <span>Current</span>
+                <strong>各枝の電流</strong>
+              </div>
+              <div class="example-item">
+                <span>Power</span>
+                <strong>消費電力</strong>
+              </div>
+            </div>
+          </div>
 
           <p>
             特に、直列と並列が混在する回路では、
@@ -59,7 +101,7 @@
             そのため、確認したい観点を最初から意識しておく方が安心できる。
           </p>
 
-          <h2>合成抵抗だけで終わらせない</h2>
+          <h2 id="total-resistance">合成抵抗だけで終わらせない</h2>
           <p>
             回路全体としてどの程度の負荷になるかを見るために、
             合成抵抗を求めるのは基本だと思う。
@@ -74,7 +116,15 @@
             1本だけ想定より電力を食っていることもある。
           </p>
 
-          <h2>直列では電流が同じになる</h2>
+          <div class="point-box">
+            <strong>ポイント</strong>
+            <p>
+              合成抵抗は「全体の負荷」を見る入口です。
+              実際の部品選定では、各抵抗の電圧・電流・消費電力まで確認した方が安全です。
+            </p>
+          </div>
+
+          <h2 id="series">直列では電流が同じになる</h2>
           <p>
             直列接続では、同じ電流が各抵抗に流れる。
             そのため、抵抗値が大きいほど両端電圧も大きくなり、
@@ -88,7 +138,25 @@
             抵抗値が大きい部品に思ったより負担が集中していることがある。
           </p>
 
-          <h2>並列では電圧が同じになる</h2>
+          <div class="example-box">
+            <h2>直列回路で見るポイント</h2>
+            <div class="example-grid">
+              <div class="example-item">
+                <span>電流</span>
+                <strong>各抵抗で同じ</strong>
+              </div>
+              <div class="example-item">
+                <span>電圧</span>
+                <strong>抵抗値で分かれる</strong>
+              </div>
+              <div class="example-item">
+                <span>注意点</span>
+                <strong>高抵抗側の電圧</strong>
+              </div>
+            </div>
+          </div>
+
+          <h2 id="parallel">並列では電圧が同じになる</h2>
           <p>
             並列接続では、各枝にかかる電圧は同じになる。
             その代わり、抵抗値によって枝電流が変わるため、
@@ -108,7 +176,33 @@
             並列回路ではこの確認が特に重要になる。
           </p>
 
-          <h2>定格電力の確認を後回しにしない</h2>
+          <div class="example-box">
+            <h2>並列回路で見るポイント</h2>
+            <div class="example-grid">
+              <div class="example-item">
+                <span>電圧</span>
+                <strong>各枝で同じ</strong>
+              </div>
+              <div class="example-item">
+                <span>電流</span>
+                <strong>抵抗値で分かれる</strong>
+              </div>
+              <div class="example-item">
+                <span>注意点</span>
+                <strong>低抵抗側の電力</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="point-box">
+            <strong>ポイント</strong>
+            <p>
+              並列回路では「電流が均等に分かれる」と思い込まないことが大事です。
+              抵抗値が違えば、電流も消費電力も変わります。
+            </p>
+          </div>
+
+          <h2 id="rating">定格電力の確認を後回しにしない</h2>
           <p>
             回路計算では値が合っていれば安心しがちだが、
             実際の部品に落とし込むときには定格電力の確認が欠かせない。
@@ -122,7 +216,15 @@
             各抵抗の消費電力は一覧で確認できると便利だと思う。
           </p>
 
-          <h2>途中の電位も見ておくと理解しやすい</h2>
+          <div class="point-box">
+            <strong>ポイント</strong>
+            <p>
+              抵抗の消費電力は、計算上の値に対して十分な余裕を見ておくと安心です。
+              特に高電圧・低抵抗・並列枝では見落としやすくなります。
+            </p>
+          </div>
+
+          <h2 id="node-voltage">途中の電位も見ておくと理解しやすい</h2>
           <p>
             直列ブロックが続く回路では、
             各抵抗の始点電位と終点電位を見ておくと理解しやすい。
@@ -149,7 +251,7 @@
             手計算や表計算より、構成を入れ替えながらすぐ再計算できる形の方が使いやすいと感じる。
           </p>
 
-          <h2>まとめ</h2>
+          <h2 id="summary">まとめ</h2>
           <p>
             抵抗ネットワーク計算では、合成抵抗だけで終わらず、
             各抵抗の電圧、電流、消費電力まで確認することが大事になる。
@@ -163,9 +265,13 @@
             各部の状態まで追えるツールがあると便利だと思う。
           </p>
 
-          <p>
-            <a class="card-link" href="./tool-resistor.html">抵抗ネットワーク計算ツールを見る</a>
-          </p>
+          <div class="related-box">
+            <strong>関連ツール</strong>
+            <p>
+              直列・並列ブロックを追加しながら、各抵抗の電圧・電流・消費電力を確認できます。
+            </p>
+            <a class="button primary" href="./tool-resistor.html">抵抗ネットワーク計算ツールを見る</a>
+          </div>
         </article>
       </div>
     </section>
