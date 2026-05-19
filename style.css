@@ -877,3 +877,95 @@ img {
     grid-template-columns: 1fr;
   }
 }
+
+.article {
+    line-height: 1.9;
+}
+
+.article-title {
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.article-date {
+    color: #999;
+    margin-bottom: 40px;
+}
+
+.article h2 {
+    margin-top: 50px;
+    margin-bottom: 20px;
+    color: #4fc3f7;
+}
+
+.equation {
+    background: #ffffff;
+    color: #111827;
+    border: 1px solid #dbeafe;
+    border-left: 5px solid #4fc3f7;
+    padding: 18px 22px;
+    margin: 22px 0;
+    overflow-x: auto;
+    border-radius: 12px;
+    font-size: 1.15rem;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.note {
+    background: #eef6ff;
+    color: #1f2937;
+    border: 1px solid #bfdbfe;
+    border-left: 5px solid #4fc3f7;
+    padding: 16px 18px;
+    border-radius: 12px;
+    margin: 20px 0;
+}
+
+.circuit {
+    background: #ffffff;
+    color: #111827;
+    border: 1px solid #dbeafe;
+    border-left: 5px solid #4fc3f7;
+    padding: 22px;
+    border-radius: 12px;
+    overflow-x: auto;
+    line-height: 1.6;
+    font-size: 1.05rem;
+    font-family: "Consolas", "Courier New", monospace;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
+
+.circuit-svg {
+    background: #ffffff;
+    border: 1px solid #dbeafe;
+    border-left: 5px solid #4fc3f7;
+    border-radius: 12px;
+    padding: 18px;
+    margin: 22px 0;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+}
+
+.circuit-svg svg {
+    width: 100%;
+    height: auto;
+}
+
+.circuit-svg line,
+.circuit-svg path,
+.circuit-svg circle {
+    fill: none;
+    stroke: #111827;
+    stroke-width: 3;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.circuit-svg text {
+    fill: #111827;
+    font-size: 22px;
+    font-family: Georgia, "Times New Roman", serif;
+}
+
+.circuit-svg .node {
+    fill: #111827;
+}

@@ -1,0 +1,465 @@
+<!-- article-003.html -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLCのFHAを式変形から理解する</title>
+
+    <link rel="stylesheet" href="style.css">
+
+    <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']]
+      }
+    };
+    </script>
+
+    <script
+    id="MathJax-script"
+    async
+    src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
+</head>
+
+<body>
+
+<header class="site-header">
+    <div class="container">
+        <h1 class="logo">回路メモと計算ツール</h1>
+
+        <nav class="nav">
+            <a href="index.html">ホーム</a>
+            <a href="tools.html">ツール</a>
+            <a href="articles.html">記事</a>
+        </nav>
+    </div>
+</header>
+
+<main class="container narrow">
+
+    <article class="article">
+
+        <h1 class="article-title">
+            LLCのFHA（First Harmonic Approximation）を式変形から理解する
+        </h1>
+
+        <p class="article-date">
+            2026-05-19
+        </p>
+
+        <section>
+            <h2>FHAとは何か</h2>
+
+            <p>
+                LLCコンバータでは、
+                ハーフブリッジやフルブリッジによって
+                矩形波が共振回路へ入力されます。
+            </p>
+
+            <p>
+                しかし矩形波をそのまま解析すると、
+                高調波成分が大量に含まれるため、
+                解析が非常に複雑になります。
+            </p>
+
+            <div class="note">
+                FHA（First Harmonic Approximation）は、
+                「基本波成分のみを使って解析する近似」です。
+            </div>
+        </section>
+
+        <section>
+            <h2>矩形波のフーリエ級数</h2>
+
+            <p>
+                振幅 \(A\) の矩形波は、
+                フーリエ級数で次のように表されます。
+            </p>
+
+            <div class="equation">
+                \[
+                u(t)=\frac{4A}{\pi}
+                \left(
+                \sin \omega t
+                +
+                \frac{1}{3}\sin 3\omega t
+                +
+                \frac{1}{5}\sin 5\omega t
+                + \cdots
+                \right)
+                \]
+            </div>
+
+            <p>
+                FHAでは、
+                このうち基本波成分のみを使用します。
+            </p>
+
+            <div class="equation">
+                \[
+                u(t)\approx \frac{4A}{\pi}\sin \omega t
+                \]
+            </div>
+        </section>
+
+        <section>
+            <h2>なぜ \(4/\pi\) が出るのか</h2>
+
+            <p>
+                LLCの解析では、
+                \(4/\pi\) が頻繁に登場します。
+            </p>
+
+            <p>
+                これは突然出てくる係数ではなく、
+                「矩形波の基本波成分」
+                を意味しています。
+            </p>
+
+            <div class="note">
+                FHAでは、
+                矩形波を「基本波正弦波」に置き換えて解析しています。
+            </div>
+        </section>
+
+        <section>
+            <h2>LLC入力側の基本波実効値</h2>
+
+            <p>
+                ハーフブリッジLLCでは、
+                共振回路へ加わる矩形波振幅は
+            </p>
+
+            <div class="equation">
+                \[
+                A=\frac{V_{in}}{2}
+                \]
+            </div>
+
+            <p>
+                となります。
+            </p>
+
+            <p>
+                よって基本波ピーク値は、
+            </p>
+
+            <div class="equation">
+                \[
+                V_{inAC(pk)}=\frac{2V_{in}}{\pi}
+                \]
+            </div>
+
+            <p>
+                さらに、
+                正弦波の実効値は
+            </p>
+
+            <div class="equation">
+                \[
+                V_{rms}=\frac{V_{pk}}{\sqrt2}
+                \]
+            </div>
+
+            <p>
+                なので、
+            </p>
+
+            <div class="equation">
+                \[
+                V_{inAC(rms)}
+                =
+                \frac{\sqrt2}{\pi}V_{in}
+                \]
+            </div>
+
+            <p>
+                となります。
+            </p>
+        </section>
+
+        <section>
+            <h2>出力側電流のFHA化</h2>
+
+            <p>
+                整流後の出力電流平均値は、
+                正弦波ピーク値との間に
+                次の関係があります。
+            </p>
+
+            <div class="equation">
+                \[
+                I_{out}
+                =
+                \frac{2}{\pi}I_{out(pk)}
+                \]
+            </div>
+
+            <p>
+                よって、
+            </p>
+
+            <div class="equation">
+                \[
+                I_{out(pk)}
+                =
+                \frac{\pi}{2}I_{out}
+                \]
+            </div>
+
+            <p>
+                一次側へ巻数比 \(n\) を用いて換算すると、
+            </p>
+
+            <div class="equation">
+                \[
+                I_{outAC(rms)}
+                =
+                \frac{\pi}{2\sqrt2 n}I_{out}
+                \]
+            </div>
+
+            <p>
+                が得られます。
+            </p>
+        </section>
+
+        <section>
+            <h2>FHA等価負荷抵抗 \(R_{outAC}\)</h2>
+
+            <p>
+                AC側から見た等価抵抗は、
+            </p>
+
+            <div class="equation">
+                \[
+                R_{outAC}
+                =
+                \frac{V_{outAC(rms)}}{I_{outAC(rms)}}
+                \]
+            </div>
+
+            <p>
+                で定義されます。
+            </p>
+
+            <p>
+                整理していくと、
+            </p>
+
+            <div class="equation">
+                \[
+                R_{outAC}
+                =
+                \frac{8n^2}{\pi^2}R_{out}
+                \]
+            </div>
+
+            <p>
+                が得られます。
+            </p>
+
+            <div class="note">
+                DC負荷抵抗は、
+                AC側から見ると
+                \(\frac{8}{\pi^2}\) 倍された抵抗として見えます。
+            </div>
+        </section>
+
+        <section>
+            <h2>FHA等価回路</h2>
+
+            <p>
+                FHAを適用すると、
+                LLC共振回路は
+                正弦波回路として扱えるようになります。
+            </p>
+
+<div class="circuit-svg">
+<svg viewBox="0 0 900 300" role="img" aria-label="LLC FHA equivalent circuit">
+
+  <text x="25" y="155">Vin(ac)</text>
+
+  <circle cx="150" cy="150" r="34"></circle>
+  <path d="M118 150 C125 130,138 130,145 150 C152 170,165 170,172 150"></path>
+
+  <line x1="150" y1="116" x2="150" y2="70"></line>
+  <line x1="150" y1="184" x2="150" y2="235"></line>
+
+  <line x1="150" y1="70" x2="250" y2="70"></line>
+
+  <path d="M250 70 q12 -26 24 0 q12 -26 24 0 q12 -26 24 0 q12 -26 24 0"></path>
+  <text x="292" y="38">Lr</text>
+
+  <line x1="346" y1="70" x2="440" y2="70"></line>
+
+  <line x1="440" y1="45" x2="440" y2="95"></line>
+  <line x1="456" y1="45" x2="456" y2="95"></line>
+  <text x="432" y="38">Cr</text>
+
+  <line x1="456" y1="70" x2="570" y2="70"></line>
+
+  <circle cx="570" cy="70" r="5" class="node"></circle>
+  <circle cx="570" cy="235" r="5" class="node"></circle>
+
+  <line x1="570" y1="70" x2="570" y2="105"></line>
+  <path d="M570 105 q-24 10 0 20 q24 10 0 20 q-24 10 0 20 q24 10 0 20"></path>
+  <line x1="570" y1="185" x2="570" y2="235"></line>
+  <text x="510" y="158">Lm</text>
+
+  <line x1="570" y1="70" x2="735" y2="70"></line>
+  <line x1="735" y1="70" x2="735" y2="105"></line>
+
+  <path d="M735 105 l-18 10 l36 20 l-36 20 l36 20 l-36 20 l18 10"></path>
+
+  <line x1="735" y1="205" x2="735" y2="235"></line>
+  <line x1="735" y1="235" x2="150" y2="235"></line>
+
+  <text x="760" y="158">RoutAC</text>
+
+</svg>
+</div>
+
+            <p>
+                この等価回路によって、
+                通常の交流回路解析が可能になります。
+            </p>
+        </section>
+
+        <section>
+            <h2>共振部インピーダンス</h2>
+
+            <div class="equation">
+                \[
+                Z_r
+                =
+                j\omega L_r
+                +
+                \frac{1}{j\omega C_r}
+                \]
+            </div>
+
+            <p>
+                整理すると、
+            </p>
+
+            <div class="equation">
+                \[
+                Z_r
+                =
+                j
+                \left(
+                \omega L_r
+                -
+                \frac{1}{\omega C_r}
+                \right)
+                \]
+            </div>
+
+            <p>
+                共振角周波数は、
+            </p>
+
+            <div class="equation">
+                \[
+                \omega_r
+                =
+                \frac{1}{\sqrt{L_rC_r}}
+                \]
+            </div>
+
+            <p>
+                正規化周波数
+            </p>
+
+            <div class="equation">
+                \[
+                x=\frac{\omega}{\omega_r}
+                \]
+            </div>
+
+            <p>
+                を用いると、
+            </p>
+
+            <div class="equation">
+                \[
+                Z_r
+                =
+                j
+                \sqrt{\frac{L_r}{C_r}}
+                \left(
+                x-\frac{1}{x}
+                \right)
+                \]
+            </div>
+
+            <p>
+                となります。
+            </p>
+        </section>
+
+        <section>
+            <h2>FHAの限界</h2>
+
+            <p>
+                FHAは非常に便利ですが、
+                あくまで近似です。
+            </p>
+
+            <ul>
+                <li>高調波成分を無視している</li>
+                <li>軽負荷では誤差が増える</li>
+                <li>波形歪みは反映できない</li>
+                <li>寄生成分は含まれない</li>
+            </ul>
+
+            <p>
+                実際の設計では、
+                シミュレーションや実測と合わせて確認する必要があります。
+            </p>
+        </section>
+
+        <section>
+            <h2>まとめ</h2>
+
+            <p>
+                FHAは、
+                「矩形波を基本波正弦波へ置き換える近似」
+                です。
+            </p>
+
+            <p>
+                LLCで頻繁に登場する
+                \(4/\pi\) や
+                \(8/\pi^2\)
+                は、
+            </p>
+
+            <ul>
+                <li>フーリエ級数</li>
+                <li>RMS変換</li>
+                <li>整流平均</li>
+                <li>巻数比換算</li>
+            </ul>
+
+            <p>
+                から自然に現れています。
+            </p>
+
+            <div class="note">
+                式を暗記するだけでなく、
+                「なぜその係数になるのか」
+                を理解すると、
+                LLCの理解がかなり深まります。
+            </div>
+        </section>
+
+    </article>
+
+</main>
+
+</body>
+</html>
