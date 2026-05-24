@@ -5,205 +5,207 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LLC設計ツール | 回路エンジニアの部屋</title>
 
+  <link rel="stylesheet" href="./style.css">
   <link rel="stylesheet" href="./llc-tool.css">
 </head>
 
 <body>
-  <header class="site-header">
-    <div class="header-inner">
-      <a class="site-title" href="./index.html">回路エンジニアの部屋</a>
-
-      <nav class="site-nav">
+  <header class="site-header" id="siteHeader">
+    <div class="container header-inner">
+      <a class="logo" href="./index.html">回路エンジニアの部屋</a>
+      <nav class="nav" aria-label="グローバルナビゲーション">
         <a href="./index.html">ホーム</a>
         <a href="./tools.html">ツール</a>
         <a href="./articles.html">記事</a>
+        <a href="./index.html#about">このサイトについて</a>
       </nav>
     </div>
   </header>
 
-  <main class="container">
-
+  <main>
     <section class="hero">
-      <p class="eyebrow">LLC Resonant Converter</p>
-
-      <h1>LLC設計ツール</h1>
-
-      <p>
-        STEP3の巻数比は Vbus,max 基準で計算し、
-        Ns=1 として扱います。
-      </p>
-    </section>
-
-    <div class="layout">
-
-      <section class="panel">
-        <h2>入力条件</h2>
-
-        <form id="llcForm">
-          <div class="grid two">
-
-            <label>
-              入力方式
-              <select id="bridgeType">
-                <option value="half">ハーフブリッジ</option>
-                <option value="full">フルブリッジ</option>
-              </select>
-            </label>
-
-            <label>
-              二次整流方式
-              <select id="rectifierType">
-                <option value="sync">同期整流</option>
-                <option value="center">センタタップ</option>
-                <option value="bridge">ブリッジ整流</option>
-              </select>
-            </label>
-
-            <label>
-              Vbus,min [V]
-              <input id="vbusMin" type="number" step="any" value="360">
-            </label>
-
-            <label>
-              Vbus,nom [V]
-              <input id="vbusNom" type="number" step="any" value="390">
-            </label>
-
-            <label>
-              Vbus,max [V]
-              <input id="vbusMax" type="number" step="any" value="420">
-            </label>
-
-            <label>
-              出力電圧 Vout [V]
-              <input id="vout" type="number" step="any" value="24">
-            </label>
-
-            <label>
-              出力電力 Pout [W]
-              <input id="pout" type="number" step="any" value="600">
-            </label>
-
-            <label>
-              効率見込み η [%]
-              <input id="efficiency" type="number" step="any" value="96">
-            </label>
-
-            <label>
-              共振周波数 fr [kHz]
-              <input id="frKhz" type="number" step="any" value="130">
-            </label>
-
-            <label>
-              特性インピーダンス Zr [Ω]
-              <input id="zr" type="number" step="any" value="5">
-            </label>
-
-            <label>
-              Lm/Lr 比 m
-              <input id="mRatio" type="number" step="any" value="6">
-            </label>
-
-            <label>
-              ダイオード降下 Vf [V]
-              <input id="diodeVf" type="number" step="any" value="0.5">
-            </label>
-
-            <label>
-              ZVS確認周波数 [kHz]
-              <input id="zvsFreqKhz" type="number" step="any" value="180">
-            </label>
-
-            <label>
-              Csw合計 [pF]
-              <input id="cswPf" type="number" step="any" value="500">
-            </label>
-
-            <label>
-              デッドタイム [ns]
-              <input id="deadtimeNs" type="number" step="any" value="200">
-            </label>
-
-          </div>
-
-          <div class="buttons">
-            <button type="submit">計算する</button>
-            <button type="button" id="resetBtn">初期値に戻す</button>
-            <button type="button" id="csvBtn">CSV出力</button>
-          </div>
-        </form>
-      </section>
-
-      <aside class="panel result-panel">
-        <h2>計算結果</h2>
-
-        <div class="summary-cards">
-          <div class="summary-card">
-            <div class="label">巻数比</div>
-            <div class="value" id="summaryN">-</div>
-          </div>
-
-          <div class="summary-card">
-            <div class="label">Lr</div>
-            <div class="value" id="summaryLr">-</div>
-          </div>
-
-          <div class="summary-card">
-            <div class="label">Cr</div>
-            <div class="value" id="summaryCr">-</div>
-          </div>
-
-          <div class="summary-card">
-            <div class="label">Lm</div>
-            <div class="value" id="summaryLm">-</div>
-          </div>
-        </div>
-      </aside>
-
-    </div>
-
-    <section class="panel">
-      <div class="step-card">
-        <h2>STEP1：基本条件</h2>
-        <div id="step1Result">未計算</div>
-      </div>
-
-      <div class="step-card">
-        <h2>STEP2：等価負荷</h2>
-        <div id="step2Result">未計算</div>
-      </div>
-
-      <div class="step-card">
-        <h2>STEP3：理想巻数比の計算</h2>
-        <p class="hint">
-          Vbus,max基準で n = Np / Ns を計算します。
-          初期設計では Ns = 1 として扱います。
+      <div class="container">
+        <p class="hero-label">LLC Resonant Converter</p>
+        <h1>LLC設計ツール</h1>
+        <p class="hero-text">
+          STEP3の巻数比は Vbus,max 基準で計算し、
+          初期設計では Ns=1 として扱います。
         </p>
-        <div id="step3Result">未計算</div>
-      </div>
-
-      <div class="step-card">
-        <h2>STEP4：共振定数 Lr / Cr</h2>
-        <div id="step4Result">未計算</div>
-      </div>
-
-      <div class="step-card">
-        <h2>STEP5：励磁インダクタンス Lm</h2>
-        <div id="step5Result">未計算</div>
-      </div>
-
-      <div class="step-card">
-        <h2>STEP6：ZVS目安</h2>
-        <div id="step6Result">未計算</div>
       </div>
     </section>
 
+    <section class="section">
+      <div class="container">
+        <div class="layout">
+          <section class="panel">
+            <h2>入力条件</h2>
+
+            <form id="llcForm">
+              <div class="grid two">
+                <label>
+                  入力方式
+                  <select id="bridgeType">
+                    <option value="half">ハーフブリッジ</option>
+                    <option value="full">フルブリッジ</option>
+                  </select>
+                </label>
+
+                <label>
+                  二次整流方式
+                  <select id="rectifierType">
+                    <option value="sync">同期整流</option>
+                    <option value="center">センタタップ</option>
+                    <option value="bridge">ブリッジ整流</option>
+                  </select>
+                </label>
+
+                <label>
+                  Vbus,min [V]
+                  <input id="vbusMin" type="number" step="any" value="360">
+                </label>
+
+                <label>
+                  Vbus,nom [V]
+                  <input id="vbusNom" type="number" step="any" value="390">
+                </label>
+
+                <label>
+                  Vbus,max [V]
+                  <input id="vbusMax" type="number" step="any" value="420">
+                </label>
+
+                <label>
+                  出力電圧 Vout [V]
+                  <input id="vout" type="number" step="any" value="24">
+                </label>
+
+                <label>
+                  出力電力 Pout [W]
+                  <input id="pout" type="number" step="any" value="600">
+                </label>
+
+                <label>
+                  効率見込み η [%]
+                  <input id="efficiency" type="number" step="any" value="96">
+                </label>
+
+                <label>
+                  共振周波数 fr [kHz]
+                  <input id="frKhz" type="number" step="any" value="130">
+                </label>
+
+                <label>
+                  特性インピーダンス Zr [Ω]
+                  <input id="zr" type="number" step="any" value="5">
+                </label>
+
+                <label>
+                  Lm/Lr 比 m
+                  <input id="mRatio" type="number" step="any" value="6">
+                </label>
+
+                <label>
+                  ダイオード降下 Vf [V]
+                  <input id="diodeVf" type="number" step="any" value="0.5">
+                </label>
+
+                <label>
+                  ZVS確認周波数 [kHz]
+                  <input id="zvsFreqKhz" type="number" step="any" value="180">
+                </label>
+
+                <label>
+                  Csw合計 [pF]
+                  <input id="cswPf" type="number" step="any" value="500">
+                </label>
+
+                <label>
+                  デッドタイム [ns]
+                  <input id="deadtimeNs" type="number" step="any" value="200">
+                </label>
+              </div>
+
+              <div class="buttons">
+                <button type="submit">計算する</button>
+                <button type="button" id="resetBtn">初期値に戻す</button>
+                <button type="button" id="csvBtn">CSV出力</button>
+              </div>
+            </form>
+          </section>
+
+          <aside class="panel result-panel">
+            <h2>計算結果</h2>
+
+            <div class="summary-cards">
+              <div class="summary-card">
+                <div class="label">巻数比</div>
+                <div class="value" id="summaryN">-</div>
+              </div>
+
+              <div class="summary-card">
+                <div class="label">Lr</div>
+                <div class="value" id="summaryLr">-</div>
+              </div>
+
+              <div class="summary-card">
+                <div class="label">Cr</div>
+                <div class="value" id="summaryCr">-</div>
+              </div>
+
+              <div class="summary-card">
+                <div class="label">Lm</div>
+                <div class="value" id="summaryLm">-</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <section class="panel steps-panel">
+          <div class="step-card">
+            <h2>STEP1：基本条件</h2>
+            <div id="step1Result">未計算</div>
+          </div>
+
+          <div class="step-card">
+            <h2>STEP2：等価負荷</h2>
+            <div id="step2Result">未計算</div>
+          </div>
+
+          <div class="step-card">
+            <h2>STEP3：理想巻数比の計算</h2>
+            <p class="hint">
+              Vbus,max基準で n = Np / Ns を計算します。
+              初期設計では Ns = 1 として扱います。
+            </p>
+            <div id="step3Result">未計算</div>
+          </div>
+
+          <div class="step-card">
+            <h2>STEP4：共振定数 Lr / Cr</h2>
+            <div id="step4Result">未計算</div>
+          </div>
+
+          <div class="step-card">
+            <h2>STEP5：励磁インダクタンス Lm</h2>
+            <div id="step5Result">未計算</div>
+          </div>
+
+          <div class="step-card">
+            <h2>STEP6：ZVS目安</h2>
+            <div id="step6Result">未計算</div>
+          </div>
+        </section>
+      </div>
+    </section>
   </main>
 
   <footer class="site-footer">
-    © 回路エンジニアの部屋
+    <div class="container footer-inner">
+      <p>© <span id="currentYear"></span> 回路エンジニアの部屋</p>
+    </div>
   </footer>
 
+  <script src="./script.js"></script>
   <script src="./llc-tool.js"></script>
 </body>
 </html>
