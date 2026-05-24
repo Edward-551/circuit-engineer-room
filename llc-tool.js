@@ -1,14 +1,33 @@
 function getNumber(id) {
   const el = document.getElementById(id);
-  return el ? parseFloat(el.value) || 0 : 0;
+  return el ? Number(el.value) || 0 : 0;
 }
 
-function formatNumber(value, digits = 3) {
-  if (!isFinite(value)) return "-";
-  return Number(value).toFixed(digits);
+function fmt(v, d = 3) {
+  return Number.isFinite(v) ? Number(v).toFixed(d) : "-";
 }
 
 let latestCsvRows = [];
+
+function setText(id, text) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = text;
+}
+
+function setHtml(id, html) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = html;
+}
+
+function llcGain(fn, q, m) {
+  if (fn <= 0 || q <= 0 || m <= 1) return 0;
+
+  const x = fn;
+  const termReal = 1 + (1 / m) * (1 - 1 / (x * x));
+  const termImag = q * (x - 1 / x);
+
+  return Math.abs(1 / Math.sqrt(termReal * termReal + termImag * termImag));
+}
 
 function calcLLC(e) {
   if (e) e.preventDefault();
@@ -21,277 +40,240 @@ function calcLLC(e) {
   const VbusMax = getNumber("vbusMax");
   const Vout = getNumber("vout");
   const Pout = getNumber("pout");
-  const efficiency = getNumber("efficiency") / 100;
+  const eff = getNumber("efficiency") / 100;
   const frKhz = getNumber("frKhz");
-  const zr = getNumber("zr");
-  const mRatio = getNumber("mRatio");
-  const diodeVf = getNumber("diodeVf");
+  const Zr = getNumber("zr");
+  const m = getNumber("mRatio");
+  const Vf = getNumber("diodeVf");
   const zvsFreqKhz = getNumber("zvsFreqKhz");
-  const cswPf = getNumber("cswPf");
+  const CswPf = getNumber("cswPf");
   const deadtimeNs = getNumber("deadtimeNs");
+
+  const bridgeDiv = bridgeType === "full" ? 1 : 2;
+
+  let rectDrop = 0;
+  if (rectifierType === "center") rectDrop = Vf;
+  if (rectifierType === "bridge") rectDrop = 2 * Vf;
+
+  const VoutEq = Vout + rectDrop;
+
+  const Pin = Pout / eff;
+  const Iout = Pout / Vout;
+
+  const n = VbusMax / (bridgeDiv * VoutEq);
+
+  const gainMax = bridgeDiv * n * VoutEq / VbusMax;
+  const gainNom = bridgeDiv * n * VoutEq / VbusNom;
+  const gainMin = bridgeDiv * n * VoutEq / VbusMin;
 
   const fr = frKhz * 1000;
   const w0 = 2 * Math.PI * fr;
 
-  let rectDrop = 0;
-  if (rectifierType === "center") rectDrop = diodeVf;
-  if (rectifierType === "bridge") rectDrop = diodeVf * 2;
-  if (rectifierType === "sync") rectDrop = 0;
+  const Lr = Zr / w0;
+  const Cr = 1 / (w0 * Zr);
+  const Lm = Lr * m;
 
-  const VoutEq = Vout + rectDrop;
-  const bridgeDiv = bridgeType === "full" ? 1 : 2;
+  const Rac = (8 / (Math.PI * Math.PI)) * n * n * VoutEq * VoutEq / Pout;
+  const Q = Zr / Rac;
 
-  const Pin = Pout / efficiency;
-  const Iout = Pout / Vout;
+  const wzvs = 2 * Math.PI * zvsFreqKhz * 1000;
+  const Imag = VbusNom / (4 * wzvs * Lm);
+  const Esw = 0.5 * CswPf * 1e-12 * VbusNom * VbusNom;
+  const Emag = 0.5 * Lm * Imag * Imag;
+  const zvsMargin = Esw > 0 ? Emag / Esw : 0;
+  const requiredDeadtime = Imag > 0 ? CswPf * 1e-12 * VbusNom / Imag : 0;
 
-  const nIdeal = VbusMax / (bridgeDiv * VoutEq);
-
-  const gainAtMax = bridgeDiv * nIdeal * VoutEq / VbusMax;
-  const gainAtNom = bridgeDiv * nIdeal * VoutEq / VbusNom;
-  const gainAtMin = bridgeDiv * nIdeal * VoutEq / VbusMin;
-
-  const Rac = (8 / (Math.PI * Math.PI)) * Math.pow(nIdeal, 2) * Math.pow(VoutEq, 2) / Pout;
-
-  const Cr = 1 / (w0 * zr);
-  const Lr = zr / w0;
-  const Lm = Lr * mRatio;
-
-  const zvsFreq = zvsFreqKhz * 1000;
-  const wZvs = 2 * Math.PI * zvsFreq;
-  const Imag = VbusNom / (4 * wZvs * Lm);
-  const Esw = 0.5 * (cswPf * 1e-12) * Math.pow(VbusNom, 2);
-  const LmEnergy = 0.5 * Lm * Math.pow(Imag, 2);
-  const zvsMargin = Esw > 0 ? LmEnergy / Esw : 0;
-  const requiredDeadtime = Imag > 0 ? (cswPf * 1e-12 * VbusNom) / Imag : 0;
+  setText("summaryN", `${fmt(n, 3)} : 1`);
+  setText("summaryLr", `${fmt(Lr * 1e6, 2)} µH`);
+  setText("summaryCr", `${fmt(Cr * 1e9, 2)} nF`);
+  setText("summaryLm", `${fmt(Lm * 1e6, 2)} µH`);
 
   setHtml("step1Result", `
     <div class="results-list">
-      <div class="result-row"><strong>入力電力 Pin</strong><code>${formatNumber(Pin, 2)} W</code></div>
-      <div class="result-row"><strong>出力電流 Iout</strong><code>${formatNumber(Iout, 2)} A</code></div>
+      <div class="result-row"><strong>入力電力 Pin</strong><code>${fmt(Pin, 2)} W</code></div>
+      <div class="result-row"><strong>出力電流 Iout</strong><code>${fmt(Iout, 2)} A</code></div>
     </div>
   `);
 
   setHtml("step2Result", `
     <div class="results-list">
-      <div class="result-row"><strong>等価負荷 Rac</strong><code>${formatNumber(Rac, 3)} Ω</code></div>
+      <div class="result-row"><strong>等価負荷 Rac</strong><code>${fmt(Rac, 3)} Ω</code></div>
+      <div class="result-row"><strong>Q</strong><code>${fmt(Q, 3)}</code></div>
     </div>
   `);
 
   setHtml("step3Result", `
     <div class="results-list">
-      <div class="result-row"><strong>理想巻数比 n = Np/Ns</strong><code>${formatNumber(nIdeal, 3)} : 1</code></div>
+      <div class="result-row"><strong>理想巻数比 n = Np/Ns</strong><code>${fmt(n, 3)} : 1</code></div>
       <div class="result-row"><strong>基準条件</strong><code>Vbus,max 基準</code></div>
-      <div class="result-row"><strong>Vbus,max時 必要ゲイン</strong><code>${formatNumber(gainAtMax, 3)}</code></div>
-      <div class="result-row"><strong>Vbus,nom時 必要ゲイン</strong><code>${formatNumber(gainAtNom, 3)}</code></div>
-      <div class="result-row"><strong>Vbus,min時 必要ゲイン</strong><code>${formatNumber(gainAtMin, 3)}</code></div>
+      <div class="result-row"><strong>Vbus,max時 必要ゲイン</strong><code>${fmt(gainMax, 3)}</code></div>
+      <div class="result-row"><strong>Vbus,nom時 必要ゲイン</strong><code>${fmt(gainNom, 3)}</code></div>
+      <div class="result-row"><strong>Vbus,min時 必要ゲイン</strong><code>${fmt(gainMin, 3)}</code></div>
     </div>
-    <p class="hint">初期設計では Ns=1 として巻数比のみを扱います。</p>
   `);
 
   setHtml("step4Result", `
     <div class="results-list">
-      <div class="result-row"><strong>共振インダクタ Lr</strong><code>${formatNumber(Lr * 1e6, 2)} µH</code></div>
-      <div class="result-row"><strong>共振コンデンサ Cr</strong><code>${formatNumber(Cr * 1e9, 2)} nF</code></div>
+      <div class="result-row"><strong>Lr</strong><code>${fmt(Lr * 1e6, 2)} µH</code></div>
+      <div class="result-row"><strong>Cr</strong><code>${fmt(Cr * 1e9, 2)} nF</code></div>
     </div>
   `);
 
   setHtml("step5Result", `
     <div class="results-list">
-      <div class="result-row"><strong>励磁インダクタンス Lm</strong><code>${formatNumber(Lm * 1e6, 2)} µH</code></div>
-      <div class="result-row"><strong>Lm/Lr</strong><code>${formatNumber(mRatio, 2)}</code></div>
+      <div class="result-row"><strong>Lm</strong><code>${fmt(Lm * 1e6, 2)} µH</code></div>
+      <div class="result-row"><strong>Lm/Lr</strong><code>${fmt(m, 2)}</code></div>
     </div>
   `);
 
   setHtml("step6Result", `
     <div class="results-list">
-      <div class="result-row"><strong>励磁電流</strong><code>${formatNumber(Imag, 3)} A</code></div>
-      <div class="result-row"><strong>Csw充放電エネルギー</strong><code>${formatNumber(Esw * 1e6, 3)} µJ</code></div>
-      <div class="result-row"><strong>励磁エネルギー</strong><code>${formatNumber(LmEnergy * 1e6, 3)} µJ</code></div>
-      <div class="result-row"><strong>ZVSマージン</strong><code>${formatNumber(zvsMargin, 2)} x</code></div>
-      <div class="result-row"><strong>必要デッドタイム</strong><code>${formatNumber(requiredDeadtime * 1e9, 1)} ns</code></div>
-      <div class="result-row"><strong>設定デッドタイム</strong><code>${formatNumber(deadtimeNs, 1)} ns</code></div>
+      <div class="result-row"><strong>励磁電流</strong><code>${fmt(Imag, 3)} A</code></div>
+      <div class="result-row"><strong>Csw充放電エネルギー</strong><code>${fmt(Esw * 1e6, 3)} µJ</code></div>
+      <div class="result-row"><strong>励磁エネルギー</strong><code>${fmt(Emag * 1e6, 3)} µJ</code></div>
+      <div class="result-row"><strong>ZVSマージン</strong><code>${fmt(zvsMargin, 2)} x</code></div>
+      <div class="result-row"><strong>必要デッドタイム</strong><code>${fmt(requiredDeadtime * 1e9, 1)} ns</code></div>
+      <div class="result-row"><strong>設定デッドタイム</strong><code>${fmt(deadtimeNs, 1)} ns</code></div>
     </div>
   `);
 
-  setText("summaryN", `${formatNumber(nIdeal, 3)} : 1`);
-  setText("summaryLr", `${formatNumber(Lr * 1e6, 2)} µH`);
-  setText("summaryCr", `${formatNumber(Cr * 1e9, 2)} nF`);
-  setText("summaryLm", `${formatNumber(Lm * 1e6, 2)} µH`);
-
   latestCsvRows = [
     ["項目", "値"],
-    ["入力電力 Pin", `${formatNumber(Pin, 2)} W`],
-    ["出力電流 Iout", `${formatNumber(Iout, 2)} A`],
-    ["等価負荷 Rac", `${formatNumber(Rac, 3)} Ω`],
-    ["理想巻数比 n", `${formatNumber(nIdeal, 3)} : 1`],
-    ["Vbus,max時 必要ゲイン", formatNumber(gainAtMax, 3)],
-    ["Vbus,nom時 必要ゲイン", formatNumber(gainAtNom, 3)],
-    ["Vbus,min時 必要ゲイン", formatNumber(gainAtMin, 3)],
-    ["Lr", `${formatNumber(Lr * 1e6, 2)} µH`],
-    ["Cr", `${formatNumber(Cr * 1e9, 2)} nF`],
-    ["Lm", `${formatNumber(Lm * 1e6, 2)} µH`],
-    ["ZVSマージン", `${formatNumber(zvsMargin, 2)} x`]
+    ["n", `${fmt(n, 3)} : 1`],
+    ["Rac", `${fmt(Rac, 3)} Ω`],
+    ["Q", fmt(Q, 3)],
+    ["Lr", `${fmt(Lr * 1e6, 2)} µH`],
+    ["Cr", `${fmt(Cr * 1e9, 2)} nF`],
+    ["Lm", `${fmt(Lm * 1e6, 2)} µH`],
+    ["ZVSマージン", `${fmt(zvsMargin, 2)} x`]
   ];
 
-  drawGainChart({
-    frKhz,
-    mRatio,
-    gainAtMax,
-    gainAtNom,
-    gainAtMin
-  });
+  drawGainChart(Q, m, gainMax, gainNom, gainMin);
 }
 
-function setHtml(id, html) {
-  const el = document.getElementById(id);
-  if (el) el.innerHTML = html;
-}
-
-function setText(id, text) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = text;
-}
-
-function llcGain(fn, q, m) {
-  const x = fn;
-  const a = 1 + (1 / m) * (1 - 1 / (x * x));
-  const b = q * (x - 1 / x);
-  return 1 / Math.sqrt(a * a + b * b);
-}
-
-function drawGainChart({ frKhz, mRatio, gainAtMax, gainAtNom, gainAtMin }) {
+function drawGainChart(Q, m, gainMax, gainNom, gainMin) {
   const canvas = document.getElementById("gainChart");
   if (!canvas) return;
 
   const ctx = canvas.getContext("2d");
-  const w = canvas.width;
-  const h = canvas.height;
+  const W = canvas.width;
+  const H = canvas.height;
 
-  ctx.clearRect(0, 0, w, h);
+  ctx.clearRect(0, 0, W, H);
 
-  const padL = 58;
-  const padR = 22;
-  const padT = 24;
-  const padB = 48;
+  const left = 58;
+  const right = 20;
+  const top = 24;
+  const bottom = 48;
 
-  const xMin = 0.45;
-  const xMax = 2.2;
+  const xMin = 0.5;
+  const xMax = 2.0;
   const yMin = 0;
-  const yMax = 2.2;
+  const yMax = 2.0;
 
-  function px(x) {
-    return padL + ((x - xMin) / (xMax - xMin)) * (w - padL - padR);
-  }
+  const px = x => left + (x - xMin) / (xMax - xMin) * (W - left - right);
+  const py = y => H - bottom - (y - yMin) / (yMax - yMin) * (H - top - bottom);
 
-  function py(y) {
-    return h - padB - ((y - yMin) / (yMax - yMin)) * (h - padT - padB);
-  }
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, W, H);
 
-  ctx.lineWidth = 1;
   ctx.strokeStyle = "#d9e0ea";
-  ctx.fillStyle = "#667085";
+  ctx.lineWidth = 1;
   ctx.font = "12px system-ui";
+  ctx.fillStyle = "#667085";
 
-  for (let gx = 0.5; gx <= 2.2; gx += 0.25) {
+  for (let x = 0.5; x <= 2.0; x += 0.25) {
     ctx.beginPath();
-    ctx.moveTo(px(gx), padT);
-    ctx.lineTo(px(gx), h - padB);
+    ctx.moveTo(px(x), top);
+    ctx.lineTo(px(x), H - bottom);
     ctx.stroke();
+    ctx.fillText(fmt(x, 2), px(x) - 10, H - 25);
   }
 
-  for (let gy = 0; gy <= 2.2; gy += 0.25) {
+  for (let y = 0; y <= 2.0; y += 0.25) {
     ctx.beginPath();
-    ctx.moveTo(padL, py(gy));
-    ctx.lineTo(w - padR, py(gy));
+    ctx.moveTo(left, py(y));
+    ctx.lineTo(W - right, py(y));
     ctx.stroke();
+    ctx.fillText(fmt(y, 2), 18, py(y) + 4);
   }
 
   ctx.strokeStyle = "#1f2937";
   ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(padL, h - padB);
-  ctx.lineTo(w - padR, h - padB);
-  ctx.moveTo(padL, padT);
-  ctx.lineTo(padL, h - padB);
+  ctx.moveTo(left, top);
+  ctx.lineTo(left, H - bottom);
+  ctx.lineTo(W - right, H - bottom);
   ctx.stroke();
 
-  ctx.fillStyle = "#1f2937";
-  ctx.fillText("fn = fs / fr", w / 2 - 30, h - 12);
-  ctx.save();
-  ctx.translate(18, h / 2 + 30);
-  ctx.rotate(-Math.PI / 2);
-  ctx.fillText("Gain", 0, 0);
-  ctx.restore();
-
   const curves = [
-    { q: 0.25, color: "#94a3b8" },
-    { q: 0.45, color: "#2563eb" },
-    { q: 0.75, color: "#0f766e" }
+    { q: Q * 0.6, color: "#94a3b8" },
+    { q: Q, color: "#2563eb" },
+    { q: Q * 1.5, color: "#0f766e" }
   ];
 
-  curves.forEach((curve) => {
-    ctx.strokeStyle = curve.color;
+  for (const c of curves) {
+    ctx.strokeStyle = c.color;
     ctx.lineWidth = 2;
     ctx.beginPath();
 
-    for (let i = 0; i <= 220; i++) {
-      const x = xMin + ((xMax - xMin) * i) / 220;
-      const y = Math.min(llcGain(x, curve.q, mRatio), yMax);
+    for (let i = 0; i <= 240; i++) {
+      const x = xMin + (xMax - xMin) * i / 240;
+      const y = Math.min(llcGain(x, Math.max(c.q, 0.02), m), yMax);
       if (i === 0) ctx.moveTo(px(x), py(y));
       else ctx.lineTo(px(x), py(y));
     }
 
     ctx.stroke();
-  });
-
-  const reqs = [
-    { y: gainAtMax, label: "max" },
-    { y: gainAtNom, label: "nom" },
-    { y: gainAtMin, label: "min" }
-  ];
+  }
 
   ctx.strokeStyle = "#b45309";
   ctx.fillStyle = "#b45309";
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 1.4;
 
-  reqs.forEach((r) => {
-    if (!isFinite(r.y)) return;
-    const y = Math.min(r.y, yMax);
+  [
+    ["max", gainMax],
+    ["nom", gainNom],
+    ["min", gainMin]
+  ].forEach(([name, g]) => {
+    if (!Number.isFinite(g)) return;
+    const y = Math.min(g, yMax);
 
     ctx.beginPath();
-    ctx.moveTo(padL, py(y));
-    ctx.lineTo(w - padR, py(y));
+    ctx.moveTo(left, py(y));
+    ctx.lineTo(W - right, py(y));
     ctx.stroke();
-
-    ctx.fillText(`G ${r.label}=${formatNumber(r.y, 2)}`, padL + 8, py(y) - 4);
+    ctx.fillText(`G ${name}=${fmt(g, 2)}`, left + 8, py(y) - 5);
   });
 
-  ctx.fillStyle = "#667085";
-  ctx.fillText(`fr = ${formatNumber(frKhz, 1)} kHz`, w - 145, padT + 18);
+  ctx.fillStyle = "#1f2937";
+  ctx.fillText("fn = fs / fr", W / 2 - 34, H - 8);
+  ctx.save();
+  ctx.translate(16, H / 2 + 20);
+  ctx.rotate(-Math.PI / 2);
+  ctx.fillText("Gain", 0, 0);
+  ctx.restore();
 }
 
 function exportCSV() {
-  if (latestCsvRows.length <= 1) calcLLC();
+  if (!latestCsvRows.length) calcLLC();
 
   const csv = latestCsvRows
-    .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
     .join("\n");
 
   const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-
   a.href = url;
   a.download = "llc_design_result.csv";
   a.click();
-
   URL.revokeObjectURL(url);
 }
 
 function exportPNG() {
   const canvas = document.getElementById("gainChart");
   if (!canvas) return;
-
   const a = document.createElement("a");
   a.href = canvas.toDataURL("image/png");
   a.download = "llc_gain_chart.png";
