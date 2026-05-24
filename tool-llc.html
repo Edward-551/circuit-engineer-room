@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LLC設計ツール | 回路エンジニアの部屋</title>
 
-  <link rel="stylesheet" href="./style-llc.css">
+  <link rel="stylesheet" href="./llc-tool.css">
 </head>
 
 <body>
@@ -36,13 +36,10 @@
 
     <div class="layout">
 
-      <!-- 入力 -->
       <section class="panel">
-
         <h2>入力条件</h2>
 
         <form id="llcForm">
-
           <div class="grid two">
 
             <label>
@@ -64,67 +61,67 @@
 
             <label>
               Vbus,min [V]
-              <input id="vbusMin" type="number" value="360">
+              <input id="vbusMin" type="number" step="any" value="360">
             </label>
 
             <label>
               Vbus,nom [V]
-              <input id="vbusNom" type="number" value="390">
+              <input id="vbusNom" type="number" step="any" value="390">
             </label>
 
             <label>
               Vbus,max [V]
-              <input id="vbusMax" type="number" value="420">
+              <input id="vbusMax" type="number" step="any" value="420">
             </label>
 
             <label>
               出力電圧 Vout [V]
-              <input id="vout" type="number" value="24">
+              <input id="vout" type="number" step="any" value="24">
             </label>
 
             <label>
               出力電力 Pout [W]
-              <input id="pout" type="number" value="600">
+              <input id="pout" type="number" step="any" value="600">
             </label>
 
             <label>
               効率見込み η [%]
-              <input id="efficiency" type="number" value="96">
+              <input id="efficiency" type="number" step="any" value="96">
             </label>
 
             <label>
               共振周波数 fr [kHz]
-              <input id="frKhz" type="number" value="130">
+              <input id="frKhz" type="number" step="any" value="130">
             </label>
 
             <label>
               特性インピーダンス Zr [Ω]
-              <input id="zr" type="number" value="5">
+              <input id="zr" type="number" step="any" value="5">
             </label>
 
             <label>
               Lm/Lr 比 m
-              <input id="mRatio" type="number" value="6">
+              <input id="mRatio" type="number" step="any" value="6">
             </label>
 
             <label>
               ダイオード降下 Vf [V]
-              <input id="diodeVf" type="number" value="0.5">
+              <input id="diodeVf" type="number" step="any" value="0.5">
             </label>
 
             <label>
               ZVS確認周波数 [kHz]
-              <input id="zvsFreqKhz" type="number" value="180">
+              <input id="zvsFreqKhz" type="number" step="any" value="180">
             </label>
 
             <label>
               Csw合計 [pF]
-              <input id="cswPf" type="number" value="500">
+              <input id="cswPf" type="number" step="any" value="500">
             </label>
 
             <label>
               デッドタイム [ns]
-              <input id="deadtimeNs" type="number" value="200">
+              <input id="deadtimeNs" type="number" step="any" value="200">
             </label>
 
           </div>
@@ -134,18 +131,13 @@
             <button type="button" id="resetBtn">初期値に戻す</button>
             <button type="button" id="csvBtn">CSV出力</button>
           </div>
-
         </form>
-
       </section>
 
-      <!-- 結果 -->
       <aside class="panel result-panel">
-
         <h2>計算結果</h2>
 
         <div class="summary-cards">
-
           <div class="summary-card">
             <div class="label">巻数比</div>
             <div class="value" id="summaryN">-</div>
@@ -165,16 +157,12 @@
             <div class="label">Lm</div>
             <div class="value" id="summaryLm">-</div>
           </div>
-
         </div>
-
       </aside>
 
     </div>
 
-    <!-- STEP -->
     <section class="panel">
-
       <div class="step-card">
         <h2>STEP1：基本条件</h2>
         <div id="step1Result">未計算</div>
@@ -187,12 +175,10 @@
 
       <div class="step-card">
         <h2>STEP3：理想巻数比の計算</h2>
-
         <p class="hint">
           Vbus,max基準で n = Np / Ns を計算します。
           初期設計では Ns = 1 として扱います。
         </p>
-
         <div id="step3Result">未計算</div>
       </div>
 
@@ -210,7 +196,6 @@
         <h2>STEP6：ZVS目安</h2>
         <div id="step6Result">未計算</div>
       </div>
-
     </section>
 
   </main>
@@ -220,6 +205,5 @@
   </footer>
 
   <script src="./llc-tool.js"></script>
-
 </body>
 </html>
