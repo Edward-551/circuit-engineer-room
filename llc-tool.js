@@ -3,7 +3,7 @@
 const $ = (id) => document.getElementById(id);
 const ids = [
   'vout','pout','eff','rectType','vbusMin','vbusNom','vbusMax','vf','mAtFr','nsTurns','turnRoundMode','nManual',
-  'fr','k','qDesign','lrActual','crActual','lmActual','fMin','fMax','qList','qStart','qEnd','qStep','gMin','gMax','fzvs','cossTotal','deadTime'
+  'fr','k','qDesign','lrActual','crActual','lmActual','fMin','fMax','plotMode','qList','powerList','qStart','qEnd','qStep','gMin','gMax','fzvs','cossTotal','deadTime'
 ];
 
 function num(id, fallback = 0) {
@@ -34,6 +34,34 @@ function llcGain(x, q, k) {
 }
 
 
+function plotMode() {
+  return $('plotMode')?.value || 'q';
+}
+
+function parsePowerSeries(basePout) {
+  const listText = ($('powerList')?.value || '').trim();
+  let values = [];
+  if (listText) {
+    values = listText
+      .split(/[,、\s]+/)
+      .map(v => parseFloat(v))
+      .filter(v => Number.isFinite(v) && v > 0);
+  }
+  if (!values.length && Number.isFinite(basePout) && basePout > 0) {
+    values = [basePout * 0.25, basePout * 0.5, basePout, basePout * 1.25];
+  }
+  values = values.filter((v, i, arr) => arr.findIndex(x => Math.abs(x - v) < 0.001) === i);
+  values.sort((a, b) => a - b);
+  return values.slice(0, 12);
+}
+
+function qAtPower(c, pW) {
+  // Same Lr/Cr/Lm and turns ratio, load only changed.
+  // Rac(primary) is proportional to 1/Pout, so Q is proportional to Pout.
+  if (!Number.isFinite(pW) || pW <= 0 || !Number.isFinite(c.inputs.pout) || c.inputs.pout <= 0) return NaN;
+  return c.qActual * (pW / c.inputs.pout);
+}
+
 function parseQSeries(qActual) {
   const listText = ($('qList')?.value || '').trim();
   let values = [];
@@ -57,6 +85,11 @@ function parseQSeries(qActual) {
 
 function qSeriesText(c) {
   const values = parseQSeries(c.qActual);
+  if (plotMode() === 'power') {
+    const powers = parsePowerSeries(c.inputs.pout);
+    const label = powers.length ? powers.map(p => `${fmt(p, 1)}W(Q=${fmt(qAtPower(c, p), 3)})`).join(' / ') : 'なし';
+    return `出力電力別 fsw-Gp：${label}`;
+  }
   const label = values.length ? values.map(v => fmt(v, 3)).join(' / ') : 'なし';
   return `実Q ${fmt(c.qActual, 3)}、比較Q ${label}`;
 }
@@ -189,13 +222,32 @@ function drawChart(c) {
   const pad = { l: 76, r: 26, t: 38, b: 62 };
   const fMin = Math.max(1, num('fMin', 60));
   const fMax = Math.max(fMin + 1, num('fMax', 300));
-  const sweepQs = parseQSeries(c.qActual);
-  const sweepColors = ['#0f766e', '#7c3aed', '#0891b2', '#65a30d', '#dc2626', '#9333ea', '#ea580c', '#0284c7', '#16a34a', '#be123c', '#4f46e5', '#a16207'];
-  const series = [
-    { q: c.qActual, color: '#2563eb', width: 3, label: '実Q' },
-    ...sweepQs.map((q, i) => ({ q, color: sweepColors[i % sweepColors.length], width: 1.8, label: `Q=${fmt(q, 3)}` }))
-  ];
-  if ($('qSeriesLabel')) $('qSeriesLabel').textContent = `（比較Q: ${sweepQs.map(q => fmt(q, 3)).join(', ') || 'なし'}）`;
+  const mode = plotMode();
+  const palette = ['#2563eb', '#0f766e', '#7c3aed', '#0891b2', '#65a30d', '#dc2626', '#9333ea', '#ea580c', '#0284c7', '#16a34a', '#be123c', '#4f46e5'];
+  let series = [];
+
+  if (mode === 'power') {
+    const powers = parsePowerSeries(c.inputs.pout);
+    series = powers.map((p, i) => ({
+      q: qAtPower(c, p),
+      color: palette[i % palette.length],
+      width: Math.abs(p - c.inputs.pout) < 0.001 ? 3 : 2,
+      label: `${fmt(p, 1)}W`,
+      power: p
+    })).filter(s => Number.isFinite(s.q) && s.q > 0);
+    if ($('qSeriesLabel')) {
+      $('qSeriesLabel').textContent = `（出力電力別: ${series.map(s => `${fmt(s.power, 1)}W / Q=${fmt(s.q, 3)}`).join(', ') || 'なし'}）`;
+    }
+  } else {
+    const sweepQs = parseQSeries(c.qActual);
+    series = [
+      { q: c.qActual, color: palette[0], width: 3, label: '実Q' },
+      ...sweepQs.map((q, i) => ({ q, color: palette[(i + 1) % palette.length], width: 1.8, label: `Q=${fmt(q, 3)}` }))
+    ];
+    if ($('qSeriesLabel')) $('qSeriesLabel').textContent = `（比較Q: ${sweepQs.map(q => fmt(q, 3)).join(', ') || 'なし'}）`;
+  }
+
+  if (!series.length) series = [{ q: c.qActual, color: palette[0], width: 3, label: '実Q' }];
 
   const all = [];
   for (const s of series) {
@@ -206,7 +258,7 @@ function drawChart(c) {
       if (Number.isFinite(m) && m < 4) all.push(m);
     }
   }
-  
+
   const autoYMax = Math.max(1.6, Math.min(3.5, Math.ceil(Math.max(...all, c.mReqMinBus) * 10) / 10 + 0.2));
   let yMin = num('gMin', 0);
   let yMax = num('gMax', autoYMax);
@@ -237,7 +289,6 @@ function drawChart(c) {
     ctx.textAlign = 'left';
   }
 
-  // グラフ外枠：左・下だけでなく、上・右も濃く太めに描画
   ctx.strokeStyle = '#111827';
   ctx.lineWidth = 2.2;
   ctx.beginPath();
@@ -250,10 +301,10 @@ function drawChart(c) {
   ctx.translate(20, pad.t + (h - pad.t - pad.b) / 2);
   ctx.rotate(-Math.PI / 2);
   ctx.textAlign = 'center';
-  ctx.fillText('Gain M', 0, 0);
+  ctx.fillText('Gp / Gain M', 0, 0);
   ctx.restore();
   ctx.textAlign = 'center';
-  ctx.fillText('Frequency [kHz]', pad.l + (w - pad.l - pad.r) / 2, h - 12);
+  ctx.fillText('fsw [kHz]', pad.l + (w - pad.l - pad.r) / 2, h - 12);
   ctx.textAlign = 'left';
 
   for (const s of series) {
@@ -295,6 +346,22 @@ function drawChart(c) {
     ctx.fillStyle = '#64748b';
     ctx.fillText('fr', xFr + 6, pad.t + 16);
   }
+
+  // In-chart legend for power mode. Keeps the curves readable after PNG export.
+  if (mode === 'power') {
+    const lx = w - pad.r - 150;
+    let ly = pad.t + 18;
+    ctx.font = '13px system-ui';
+    ctx.textAlign = 'left';
+    for (const s of series.slice(0, 8)) {
+      ctx.strokeStyle = s.color;
+      ctx.lineWidth = s.width;
+      ctx.beginPath(); ctx.moveTo(lx, ly - 4); ctx.lineTo(lx + 24, ly - 4); ctx.stroke();
+      ctx.fillStyle = '#334155';
+      ctx.fillText(`${s.label}  Q=${fmt(s.q, 3)}`, lx + 30, ly);
+      ly += 18;
+    }
+  }
 }
 
 function resultText(c) {
@@ -327,7 +394,9 @@ function resultText(c) {
     `fr_actual,${fmt(c.frActual / 1000, 6)},kHz`,
     `Q_actual,${fmt(c.qActual, 6)},-`,
     `k_actual,${fmt(c.kActual, 6)},-`,
+    `plot_mode,${plotMode()},-`,
     `Q_plot_list,${($('qList')?.value || '').replace(/,/g, ' / ')},-`,
+    `Power_plot_list,${($('powerList')?.value || '').replace(/,/g, ' / ')},W`,
     `Q_start,${num('qStart', 0.2)},-`,
     `Q_end,${num('qEnd', 1.0)},-`,
     `Q_step,${num('qStep', 0.1)},-`,
@@ -372,14 +441,25 @@ function downloadBlob(filename, content, type = 'text/csv;charset=utf-8;') {
 function makeGraphCsv(c) {
   const fMin = Math.max(1, num('fMin', 60));
   const fMax = Math.max(fMin + 1, num('fMax', 300));
-  const sweepQs = parseQSeries(c.qActual);
-  const qs = [c.qActual, ...sweepQs];
-  const headers = ['frequency_kHz', 'f_over_fr', ...qs.map((q, i) => i === 0 ? `Gain_Q_actual_${fmt(q, 4)}` : `Gain_Q_${fmt(q, 4)}`), 'Mreq_low_bus'];
+  let series;
+  if (plotMode() === 'power') {
+    series = parsePowerSeries(c.inputs.pout).map(p => ({
+      header: `Gp_Pout_${fmt(p, 4)}W_Q_${fmt(qAtPower(c, p), 4)}`,
+      q: qAtPower(c, p)
+    })).filter(s => Number.isFinite(s.q) && s.q > 0);
+  } else {
+    const sweepQs = parseQSeries(c.qActual);
+    series = [
+      { header: `Gp_Q_actual_${fmt(c.qActual, 4)}`, q: c.qActual },
+      ...sweepQs.map(q => ({ header: `Gp_Q_${fmt(q, 4)}`, q }))
+    ];
+  }
+  const headers = ['frequency_kHz', 'f_over_fr', ...series.map(s => s.header), 'Mreq_low_bus'];
   const rows = [headers.map(csvEscape).join(',')];
   for (let i = 0; i <= 520; i++) {
     const f = fMin + (fMax - fMin) * i / 520;
     const x = (f * 1000) / c.frActual;
-    const gains = qs.map(q => llcGain(x, q, c.kActual));
+    const gains = series.map(s => llcGain(x, s.q, c.kActual));
     rows.push([
       f.toFixed(6),
       x.toFixed(8),

@@ -1,223 +1,206 @@
-:root {
-  --bg: #f6f8fb;
-  --panel: #ffffff;
-  --text: #1f2937;
-  --muted: #667085;
-  --line: #d9e0ea;
-  --accent: #2563eb;
-  --accent2: #0f766e;
-  --warn: #b45309;
-  --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-  --radius: 16px;
-}
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLC設計ツール | 回路エンジニアの部屋</title>
+  <link rel="stylesheet" href="llc-tool.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="site-title" href="index.html">回路エンジニアの部屋</a>
+      <nav class="site-nav">
+        <a href="index.html">ホーム</a>
+        <a href="tools.html">ツール</a>
+        <a href="articles.html">記事</a>
+      </nav>
+    </div>
+  </header>
 
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: var(--text);
-  background: var(--bg);
-  line-height: 1.65;
-}
+  <main class="container">
+    <section class="hero">
+      <p class="eyebrow">LLC Resonant Converter Design</p>
+      <h1>LLC設計ツール</h1>
+      <p>
+        出力仕様と設計条件から、巻数比、反射負荷、共振部品 L<sub>r</sub> / C<sub>r</sub>、励磁インダクタンス L<sub>m</sub> を順番に導出します。
+        最後にゲイン-周波数特性を確認し、設計定数をCSVで保存できます。
+      </p>
+    </section>
 
-.site-header {
-  background: #fff;
-  border-bottom: 1px solid var(--line);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-.header-inner {
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 14px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-}
-.site-title {
-  color: var(--text);
-  text-decoration: none;
-  font-weight: 800;
-  letter-spacing: .02em;
-}
-.site-nav { display: flex; gap: 16px; }
-.site-nav a {
-  color: var(--muted);
-  text-decoration: none;
-  font-weight: 600;
-}
-.site-nav a:hover { color: var(--accent); }
+    <section class="notice">
+      <strong>使い方：</strong>
+      まずSTEP1〜STEP8で定数を決め、STEP9〜STEP10でゲイン特性、STEP11で任意周波数の励磁電流とZVS関連エネルギーを確認します。FHAベースの初期設計向けです。
+    </section>
 
-.container {
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 28px 20px 64px;
-}
-.hero {
-  background: linear-gradient(135deg, #fff, #eef5ff);
-  border: 1px solid var(--line);
-  border-radius: 22px;
-  padding: 30px;
-  box-shadow: var(--shadow);
-  margin-bottom: 18px;
-}
-.eyebrow {
-  color: var(--accent);
-  font-weight: 800;
-  margin: 0 0 6px;
-  letter-spacing: .08em;
-  font-size: 0.85rem;
-}
-h1 { margin: 0 0 10px; font-size: clamp(2rem, 4vw, 3rem); }
-h2 { margin: 0 0 18px; font-size: 1.35rem; }
-h3 { margin: 0 0 12px; font-size: 1.05rem; }
-p { margin-top: 0; }
-.notice {
-  background: #fff7ed;
-  border: 1px solid #fed7aa;
-  color: #7c2d12;
-  border-radius: var(--radius);
-  padding: 14px 16px;
-  margin-bottom: 22px;
-}
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(380px, .95fr);
-  gap: 22px;
-  align-items: start;
-}
-.panel {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 22px;
-  box-shadow: var(--shadow);
-}
-.result-panel { position: sticky; top: 82px; }
-.step-card {
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 16px;
-  margin-bottom: 14px;
-  background: #fbfdff;
-}
-.grid { display: grid; gap: 12px; }
-.grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-label {
-  display: grid;
-  gap: 5px;
-  font-weight: 700;
-  color: #344054;
-  font-size: .92rem;
-}
-input, select {
-  width: 100%;
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
-  padding: 10px 11px;
-  font: inherit;
-  background: #fff;
-  color: var(--text);
-}
-input:focus, select:focus {
-  outline: 2px solid rgba(37, 99, 235, .2);
-  border-color: var(--accent);
-}
-.formula {
-  margin: 12px 0 0;
-  color: #334155;
-  background: #f1f5f9;
-  padding: 9px 11px;
-  border-radius: 10px;
-  font-family: "Segoe UI", system-ui, sans-serif;
-}
-.hint {
-  margin: 8px 0 0;
-  color: var(--muted);
-  font-size: .9rem;
-}
-.buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
-button {
-  border: 0;
-  border-radius: 999px;
-  background: var(--accent);
-  color: #fff;
-  padding: 10px 16px;
-  font-weight: 800;
-  cursor: pointer;
-}
-button:nth-child(2) { background: var(--accent2); }
-button:nth-child(3) { background: #475569; }
-button:hover { filter: brightness(.95); }
-.summary-cards {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 22px;
-}
-.summary-card {
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 14px;
-  background: #fbfdff;
-}
-.summary-card .label { color: var(--muted); font-size: .85rem; font-weight: 700; }
-.summary-card .value { font-size: 1.45rem; font-weight: 900; margin-top: 4px; }
-.results-list { display: grid; gap: 10px; margin-bottom: 24px; }
-.result-row {
-  border-left: 4px solid var(--accent);
-  background: #f8fafc;
-  border-radius: 10px;
-  padding: 10px 12px;
-}
-.result-row strong { display: block; margin-bottom: 2px; }
-.result-row code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  color: #0f172a;
-  white-space: normal;
-}
-.chart-wrap {
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 10px;
-  background: #fff;
-  overflow-x: auto;
-}
-canvas { max-width: 100%; height: auto; }
-.legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  align-items: center;
-  color: var(--muted);
-  font-size: .9rem;
-  margin-top: 10px;
-}
-.line { display: inline-block; width: 28px; height: 3px; border-radius: 999px; vertical-align: middle; }
-.qlow { background: #94a3b8; }
-.qmid { background: #2563eb; }
-.qhigh { background: #0f766e; }
-.req { background: #b45309; }
-.site-footer {
-  border-top: 1px solid var(--line);
-  background: #fff;
-  text-align: center;
-  color: var(--muted);
-  padding: 18px;
-}
-@media (max-width: 980px) {
-  .layout { grid-template-columns: 1fr; }
-  .result-panel { position: static; }
-}
-@media (max-width: 680px) {
-  .header-inner { flex-direction: column; align-items: flex-start; }
-  .grid.two, .grid.three, .summary-cards { grid-template-columns: 1fr; }
-  .hero { padding: 22px; }
-}
-.legend-note {
-  color: #475569;
-  font-size: 0.9rem;
-}
+    <div class="layout">
+      <section class="panel input-panel">
+        <h2>入力条件</h2>
+
+        <div class="step-card">
+          <h3>STEP1：出力仕様</h3>
+          <div class="grid two">
+            <label>出力電圧 V<sub>out</sub> [V]<input id="vout" type="number" step="0.1" value="24"></label>
+            <label>出力電力 P<sub>out</sub> [W]<input id="pout" type="number" step="1" value="480"></label>
+            <label>目標効率 η [%]<input id="eff" type="number" step="0.1" value="94"></label>
+            <label>整流方式
+              <select id="rectType">
+                <option value="center">センタータップ</option>
+                <option value="bridge">ブリッジ整流</option>
+              </select>
+            </label>
+          </div>
+          <p class="formula">I<sub>out</sub> = P<sub>out</sub> / V<sub>out</sub>,　R<sub>out</sub> = V<sub>out</sub><sup>2</sup> / P<sub>out</sub></p>
+        </div>
+
+        <div class="step-card">
+          <h3>STEP2：入力バス電圧</h3>
+          <div class="grid three">
+            <label>V<sub>bus,min</sub> [V]<input id="vbusMin" type="number" step="1" value="360"></label>
+            <label>V<sub>bus,nom</sub> [V]<input id="vbusNom" type="number" step="1" value="390"></label>
+            <label>V<sub>bus,max</sub> [V]<input id="vbusMax" type="number" step="1" value="420"></label>
+          </div>
+          <p class="formula">ハーフブリッジ一次基本波：V<sub>1,rms</sub> ≈ √2・V<sub>bus</sub> / π</p>
+        </div>
+
+        <div class="step-card">
+          <h3>STEP3：巻数比の導出</h3>
+          <div class="grid two">
+            <label>整流ダイオード電圧 V<sub>f</sub> [V]<input id="vf" type="number" step="0.01" value="0.35"></label>
+            <label>共振点ゲイン M<sub>fr</sub> [-]<input id="mAtFr" type="number" step="0.01" value="1.00"></label>
+            <label>二次巻数 N<sub>s</sub> [turn]<input id="nsTurns" type="number" step="1" value="4"></label>
+            <label>巻数比の丸め
+              <select id="turnRoundMode">
+                <option value="none">計算値のまま</option>
+                <option value="ceil">一次巻数を切り上げ</option>
+                <option value="floor">一次巻数を切り下げ</option>
+                <option value="round" selected>一次巻数を四捨五入</option>
+                <option value="manual">巻数比を手入力</option>
+              </select>
+            </label>
+            <label>手入力 n = N<sub>p</sub> / N<sub>s</sub> [-]<input id="nManual" type="number" step="0.01" placeholder="手入力時のみ"></label>
+          </div>
+          <p class="formula">n<sub>calc</sub> = N<sub>p</sub> / N<sub>s</sub> ≈ V<sub>bus,nom</sub> / {2・M<sub>fr</sub>・(V<sub>out</sub> + V<sub>f</sub>)}</p>
+          <p class="formula">N<sub>p,calc</sub> = n<sub>calc</sub> × N<sub>s</sub> → 切り上げ/切り下げ/四捨五入 → n<sub>use</sub> = N<sub>p,use</sub> / N<sub>s</sub></p>
+          <p class="hint">※ センタータップ時は片側二次巻線基準の概算。実際の巻線構成に合わせてN<sub>s</sub>を入れてください。</p>
+        </div>
+
+        <div class="step-card">
+          <h3>STEP4：共振周波数とインダクタンス比</h3>
+          <div class="grid three">
+            <label>共振周波数 f<sub>r</sub> [kHz]<input id="fr" type="number" step="1" value="135"></label>
+            <label>L<sub>m</sub> / L<sub>r</sub> = k [-]<input id="k" type="number" step="0.1" value="5.5"></label>
+            <label>設計Q Q<sub>e</sub> [-]<input id="qDesign" type="number" step="0.01" value="0.55"></label>
+          </div>
+          <p class="formula">f<sub>r</sub> = 1 / {2π√(L<sub>r</sub>C<sub>r</sub>)},　k = L<sub>m</sub> / L<sub>r</sub></p>
+        </div>
+
+        <div class="step-card">
+          <h3>STEP5：反射負荷</h3>
+          <p class="formula">R<sub>ac</sub> = 8R<sub>out</sub> / π<sup>2</sup>,　R<sub>ac,p</sub> = n<sup>2</sup>R<sub>ac</sub></p>
+          <p class="hint">FHAで二次側整流負荷を交流等価負荷に換算し、一次側へ反射します。</p>
+        </div>
+
+        <div class="step-card">
+          <h3>STEP6：L<sub>r</sub> / C<sub>r</sub> の導出</h3>
+          <p class="formula">Q<sub>e</sub> = √(L<sub>r</sub>/C<sub>r</sub>) / R<sub>ac,p</sub></p>
+          <p class="formula">L<sub>r</sub> = Q<sub>e</sub>R<sub>ac,p</sub> / (2πf<sub>r</sub>),　C<sub>r</sub> = 1 / {(2πf<sub>r</sub>)<sup>2</sup>L<sub>r</sub>}</p>
+        </div>
+
+        <div class="step-card">
+          <h3>STEP7：L<sub>m</sub> の導出</h3>
+          <p class="formula">L<sub>m</sub> = kL<sub>r</sub></p>
+          <p class="hint">kを大きくすると励磁電流は減りますが、必要ゲインやZVS範囲とのバランス確認が必要です。</p>
+        </div>
+
+        <div class="step-card">
+          <h3>STEP8：実部品値での再計算</h3>
+          <div class="grid three">
+            <label>実L<sub>r</sub> [µH]<input id="lrActual" type="number" step="0.1" placeholder="自動値を使用"></label>
+            <label>実C<sub>r</sub> [nF]<input id="crActual" type="number" step="0.1" placeholder="自動値を使用"></label>
+            <label>実L<sub>m</sub> [µH]<input id="lmActual" type="number" step="1" placeholder="自動値を使用"></label>
+          </div>
+          <p class="formula">実部品値を入れると、f<sub>r</sub>、Q、kを再計算します。</p>
+        </div>
+
+        <div class="step-card">
+          <h3>STEP9：ゲイングラフ条件</h3>
+          <div class="grid three">
+            <label>最低周波数 [kHz]<input id="fMin" type="number" step="1" value="60"></label>
+            <label>最高周波数 [kHz]<input id="fMax" type="number" step="1" value="300"></label>
+            <label>グラフ表示モード
+              <select id="plotMode">
+                <option value="q" selected>Qスイープ</option>
+                <option value="power">出力電力別 fsw-Gp</option>
+              </select>
+            </label>
+            <label>任意Qリスト [-]<input id="qList" type="text" value="0.4,0.6,0.8" placeholder="例：0.1,0.2,0.3"></label>
+            <label>出力電力リスト [W]<input id="powerList" type="text" value="120,240,480,600" placeholder="例：60,120,240,480,600"></label>
+            <label>Q開始 [-]<input id="qStart" type="number" step="0.01" value="0.2"></label>
+            <label>Q終了 [-]<input id="qEnd" type="number" step="0.01" value="1.0"></label>
+            <label>Q刻み [-]<input id="qStep" type="number" step="0.01" value="0.1"></label>
+            <label>G最小 [-]<input id="gMin" type="number" step="0.05" value="0"></label>
+            <label>G最大 [-]<input id="gMax" type="number" step="0.05" value="2.0"></label>
+          </div>
+          <p class="formula">Qスイープでは任意Qリストをプロットします。出力電力別では、現在の実部品値から各Pout時のQを再計算して fsw-Gp 特性を重ね描きします。</p>
+          <p class="hint">出力電力別は、同じLr/Cr/Lm/巻数比のまま負荷だけを変えたFHA目安です。電力が下がるほど等価負荷が大きくなり、Qは小さくなります。</p>
+        </div>
+
+        <div class="step-card">
+          <h3>STEP10：必要ゲイン確認</h3>
+          <p class="formula">M<sub>req</sub> = V<sub>bus,nom</sub> / V<sub>bus</sub> を目安に、低入力時の昇圧余裕を確認します。</p>
+        </div>
+
+        <div class="step-card">
+          <h3>STEP11：励磁電流・ZVSエネルギー確認</h3>
+          <div class="grid three">
+            <label>確認周波数 f<sub>chk</sub> [kHz]<input id="fzvs" type="number" step="1" value="250"></label>
+            <label>スイッチングノード容量 C<sub>sw</sub> [pF]<input id="cossTotal" type="number" step="10" value="400"></label>
+            <label>設定デッドタイム t<sub>dead,set</sub> [ns]<input id="deadTime" type="number" step="5" value="120"></label>
+          </div>
+          <p class="formula">I<sub>m,pk</sub> ≈ V<sub>bus,max</sub> / (8L<sub>m</sub>f<sub>chk</sub>)</p>
+          <p class="formula">E<sub>Lm</sub> = 1/2 L<sub>m</sub>I<sub>m,pk</sub><sup>2</sup>,　E<sub>Csw</sub> = 1/2 C<sub>sw</sub>V<sub>bus,max</sub><sup>2</sup>,　t<sub>dead,min</sub> ≈ C<sub>sw</sub>V<sub>bus,max</sub> / I<sub>m,pk</sub></p>
+          <p class="hint">軽負荷・高入力・高周波側での概算確認用です。C<sub>sw</sub>はMOSFETのCossだけでなく、スイッチングノードにぶら下がる容量を含めた目安値を入れてください。</p>
+        </div>
+
+        <div class="step-card">
+          <h3>STEP12：保存</h3>
+          <p class="formula">設計条件・導出値・実部品値・ゲイン確認・励磁電流/ZVSエネルギー結果をCSV出力します。グラフデータもCSVで出力できます。</p>
+          <div class="buttons">
+            <button id="recalcBtn" type="button">再計算</button>
+            <button id="csvBtn" type="button">設計CSV出力</button>
+            <button id="graphCsvBtn" type="button">グラフCSV出力</button>
+            <button id="pngBtn" type="button">グラフPNG出力</button>
+            <button id="copyBtn" type="button">結果をコピー</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel result-panel">
+        <h2>計算結果</h2>
+        <div id="summaryCards" class="summary-cards"></div>
+
+        <h2>STEP別の導出結果</h2>
+        <div id="stepResults" class="results-list"></div>
+
+        <h2>ゲイン - 周波数特性</h2>
+        <div class="chart-wrap">
+          <canvas id="gainChart" width="900" height="520"></canvas>
+        </div>
+        <div class="legend">
+          <span class="line qmid"></span> 基準カーブ
+          <span class="line qhigh"></span> 比較カーブ
+          <span id="qSeriesLabel" class="legend-note"></span>
+          <span class="line req"></span> 必要ゲイン目安
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <p>© 回路エンジニアの部屋</p>
+  </footer>
+
+  <script src="llc-tool.js"></script>
+</body>
+</html>

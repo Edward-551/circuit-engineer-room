@@ -969,3 +969,21 @@ img {
 .circuit-svg .node {
     fill: #111827;
 }
+.compact-list {
+  margin: 10px 0 0;
+  padding-left: 1.2em;
+  color: var(--text-soft);
+}
+
+.compact-list li {
+  margin: 6px 0;
+}
+
+
+.field-help {
+  display: block;
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}

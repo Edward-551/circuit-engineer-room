@@ -1,247 +1,4 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>トランス設計ツール | 回路エンジニアの部屋</title>
-  <meta name="description" content="入力電圧、周波数、コア断面積、電流密度などからトランスの巻数・磁束密度・導線断面積・窓面積を簡易計算し、インダクタのギャップ長・飽和・蓄積エネルギーも確認できるツール。">
-  <link rel="stylesheet" href="./style.css">
-</head>
-<body>
-  <header class="site-header" id="siteHeader">
-    <div class="container header-inner">
-      <a class="logo" href="./index.html">回路エンジニアの部屋</a>
-      <nav class="nav" aria-label="グローバルナビゲーション">
-        <a href="./index.html">ホーム</a>
-        <a href="./tools.html">ツール</a>
-        <a href="./articles.html">記事</a>
-        <a href="./index.html#about">このサイトについて</a>
-      </nav>
-    </div>
-  </header>
 
-  <main>
-    <section class="hero">
-      <div class="container narrow">
-        <p class="hero-label">Transformer Tool</p>
-        <h1>トランス設計ツール</h1>
-        <p class="hero-text">
-          入力電圧、周波数、コア断面積、電流密度などから、
-          巻数・磁束密度・導線断面積・窓面積を簡易計算します。
-          LLCメイントランス向けに、目標Lmからのギャップ長・飽和電流・蓄積エネルギーも確認できます。
-        </p>
-      </div>
-    </section>
-
-    <section class="section">
-      <div class="container narrow">
-        <div class="card">
-          <div class="section-head">
-            <div>
-              <p class="section-kicker">Input</p>
-              <h2>設計条件</h2>
-            </div>
-          </div>
-
-          <div class="row">
-            <div class="field col-4">
-              <label for="design_mode">設計モード</label>
-              <select id="design_mode">
-                <option value="normal">通常トランス</option>
-                <option value="llc">LLCメイントランス</option>
-              </select>
-              <small class="field-help">LLCを選ぶと、目標Lは「目標Lm」として結果をまとめます。</small>
-            </div>
-
-            <div class="field col-4">
-              <label for="vin">入力電圧 Vin [V]</label>
-              <input type="number" id="vin" value="400">
-            </div>
-
-            <div class="field col-4">
-              <label for="vo">出力電圧 Vo [V]</label>
-              <input type="number" id="vo" value="24">
-            </div>
-
-            <div class="field col-4">
-              <label for="po">出力電力 Po [W]</label>
-              <input type="number" id="po" value="100">
-            </div>
-
-            <div class="field col-4">
-              <label for="eff">効率 η [%]</label>
-              <input type="number" id="eff" value="95">
-            </div>
-
-            <div class="field col-4">
-              <label for="fs">スイッチング周波数 fs [kHz]</label>
-              <input type="number" id="fs" value="100">
-            </div>
-
-            <div class="field col-4">
-              <label for="bmax">最大磁束密度 Bmax [T]</label>
-              <input type="number" step="0.01" id="bmax" value="0.2">
-            </div>
-
-            <div class="field col-4">
-              <label for="ae">コア断面積 Ae [mm²]</label>
-              <input type="number" id="ae" value="100">
-            </div>
-
-            <div class="field col-4">
-              <label for="ratio">巻数比 Np/Ns</label>
-              <input type="number" step="0.1" id="ratio" value="8">
-            </div>
-
-            <div class="field col-4">
-              <label for="np_manual">一次巻数 Np（0で自動）</label>
-              <input type="number" id="np_manual" value="0">
-            </div>
-
-            <div class="field col-4">
-              <label for="j">許容電流密度 J [A/mm²]</label>
-              <input type="number" step="0.1" id="j" value="4">
-            </div>
-
-            <div class="field col-4">
-              <label for="aw">窓面積 Aw [mm²]</label>
-              <input type="number" id="aw" value="200">
-            </div>
-
-            <div class="field col-4">
-              <label for="ku">占積率 Ku</label>
-              <input type="number" step="0.01" id="ku" value="0.3">
-            </div>
-
-            <div class="field col-4">
-              <label for="pri_wire_dia">一次側 線径 [mm]（0で推奨）</label>
-              <input type="number" step="0.01" id="pri_wire_dia" value="0">
-            </div>
-
-            <div class="field col-4">
-              <label for="pri_parallel">一次側 パラ数（0で推奨）</label>
-              <input type="number" id="pri_parallel" value="0">
-            </div>
-
-            <div class="field col-4">
-              <label for="sec_wire_dia">二次側 線径 [mm]（0で推奨）</label>
-              <input type="number" step="0.01" id="sec_wire_dia" value="0">
-            </div>
-
-            <div class="field col-4">
-              <label for="sec_parallel">二次側 パラ数（0で推奨）</label>
-              <input type="number" id="sec_parallel" value="0">
-            </div>
-
-            <div class="field col-4">
-              <label for="ind_l">目標Lm / 目標L Ltarget [µH]</label>
-              <input type="number" step="0.1" id="ind_l" value="0" placeholder="例：500">
-              <small class="field-help">LLCでは狙いたい励磁インダクタンス Lm を入れます。インダクタ用途では目標Lとして使います。</small>
-            </div>
-
-            <div class="field col-4">
-              <label for="ind_n">Lm計算に使う一次巻数 Np_gap [turn]</label>
-              <input type="number" step="1" id="ind_n" value="0" placeholder="0なら上のNpを自動使用">
-              <small class="field-help">LLCトランスのLmを狙う場合は一次巻数Npを使います。0なら自動計算/指定済みの一次巻数Npを使います。</small>
-            </div>
-
-            <div class="field col-4">
-              <label for="ind_ipk">ギャップ計算用 Ipk [A]</label>
-              <input type="number" step="0.1" id="ind_ipk" value="0" placeholder="例：2.5">
-            </div>
-
-            <div class="field col-4">
-              <label for="bsat">飽和磁束密度 Bsat [T]</label>
-              <input type="number" step="0.01" id="bsat" value="0.35">
-            </div>
-
-            <div class="field col-4">
-              <label for="le">磁路長 le [mm]</label>
-              <input type="number" step="0.1" id="le" value="0">
-            </div>
-
-            <div class="field col-4">
-              <label for="al_no_gap">無ギャップAL値 [nH/N²]（任意）</label>
-              <input type="number" step="1" id="al_no_gap" value="0">
-            </div>
-
-            <div class="field col-4">
-              <label for="gap_mode">ギャップ計算モード</label>
-              <select id="gap_mode">
-                <option value="none">ギャップなし / トランス想定</option>
-                <option value="target_l">目標Lm/Lから必要gを計算</option>
-                <option value="given_g">ギャップ長gからLm/Lを計算</option>
-              </select>
-            </div>
-
-            <div class="field col-4">
-              <label for="gap_g">指定ギャップ長 g [mm]（g→L計算で使用）</label>
-              <input type="number" step="0.001" id="gap_g" value="0" placeholder="例：0.3">
-            </div>
-          </div>
-
-          <div class="buttons">
-            <button type="button" onclick="calcTransformer()">計算する</button>
-            <button type="button" onclick="exportTransformerCsv()">CSV出力</button>
-          </div>
-
-          <p class="note">
-            一次巻数・線径・パラ数を0にすると、入力条件から推奨値を自動提示します。二次巻数は理論値を表示したうえで、実使用巻数は安全側に切り上げます。<br>ギャップありで必要な隙間を知りたいときは、モードを「目標Lm/Lから必要g」にして、<strong>目標Lm / 目標L</strong>を入力します。<strong>Np_gap</strong>は0のままでOKです（上の一次巻数Npを自動使用）。<strong>Ipk</strong>は飽和判定・蓄積エネルギー確認用なので、未入力ならIpk関連だけ未計算にします。
-          </p>
-        </div>
-
-        <div class="card">
-          <div class="section-head">
-            <div>
-              <p class="section-kicker">Result</p>
-              <h2>計算結果</h2>
-            </div>
-          </div>
-
-          <div id="resultMessage" class="note">
-            数値を入力して「計算する」を押してください。
-          </div>
-          <div id="resultTable"></div>
-        </div>
-
-        <div class="card">
-          <h2>見方メモ</h2>
-          <ul class="compact-list">
-            <li><strong>Np(min)</strong> は磁束密度から決まる最小値です。自動時は切り上げた整数巻数を採用します。</li>
-            <li><strong>Ns 採用値</strong> は理論値を切り上げます。巻数は整数なので、小数のまま使わない前提です。</li>
-            <li><strong>指定線径ベース使用率</strong> が100%を超える場合は、窓面積・占積率・線径/パラ数を見直してください。</li>
-            <li><strong>ギャップなし</strong> は普通のトランス確認用です。LmはAL値を入力したときだけ目安表示します。</li>
-            <li><strong>目標Lm/Lから必要g</strong> は、<strong>目標Lm / 目標L</strong>を入れると「どれくらいギャップを入れるか」を出します。LLCメイントランスでは目標Lmとして扱います。Ipkは飽和判定用なので未入力でもgは計算します。Np_gapが0なら一次巻数Npを自動使用します。</li>
-            <li><strong>ギャップ長gからLm/L</strong> は、gを入れると「そのギャップで何µHになるか」を出します。LLCメイントランスでは計算結果をLmとして見ます。Ipkは飽和判定用なので未入力でもLは計算します。Np_gapが0なら一次巻数Npを自動使用します。</li>
-          </ul>
-        </div>
-
-        <div class="card">
-          <h2>使用式</h2>
-          <div class="equation">Np = Vin / (4 × fs × Bmax × Ae)</div>
-          <div class="equation">ΔB = Vin / (4 × fs × Np × Ae)</div>
-          <div class="equation">必要導体断面積 = 電流 / 電流密度</div>
-          <div class="equation">B = L × Ipk / (N × Ae)</div>
-          <div class="equation">目標Lから：g ≒ μ0 × N² × Ae / L</div>
-          <div class="equation">g指定から：L ≒ μ0 × N² × Ae / g</div>
-          <div class="equation">E = 1/2 × L × Ipk²</div>
-          <p class="note">
-            本ツールは矩形波近似ベースの簡易計算です。
-            実際のトランス設計では、波形、温度、コア材、損失、絶縁距離、漏れインダクタンスなども確認してください。
-          </p>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="container footer-inner">
-      <p>© <span id="currentYear"></span> 回路エンジニアの部屋</p>
-    </div>
-  </footer>
-
-  <script src="./script.js"></script>
-  <script>
     const MU0 = 4 * Math.PI * 1e-7;
     let latestCsvRows = [];
 
@@ -305,7 +62,6 @@
 
     function addInputRows(csvRows){
       const inputs = [
-        ["入力", "設計モード", document.getElementById("design_mode").value],
         ["入力", "入力電圧 Vin [V]", getInputText("vin")],
         ["入力", "出力電圧 Vo [V]", getInputText("vo")],
         ["入力", "出力電力 Po [W]", getInputText("po")],
@@ -337,7 +93,6 @@
     }
 
     function calcTransformer(){
-      const designMode = document.getElementById("design_mode").value;
       const vin = getNumber("vin");
       const vo = getNumber("vo");
       const po = getNumber("po");
@@ -478,7 +233,7 @@
       };
 
       if(gapMode === "target_l"){
-        indRows.mode = "目標Lm/Lから必要gを計算";
+        indRows.mode = "目標Lから必要gを計算";
         if(indL_uH > 0 && npForGap > 0){
           const indL = indL_uH * 1e-6;
           const gap_m_simple = MU0 * npForGap * npForGap * ae / indL;
@@ -510,7 +265,7 @@
           }
 
           indRows = {
-            mode: "目標Lm/Lから必要gを計算",
+            mode: "目標Lから必要gを計算",
             indL: fmt(indL_uH, 2, "µH"),
             indN: `${fmt(npForGap, 0, "turn")}（${npForGapNote}）`,
             indIpk: hasIndIpk ? fmt(indIpk, 2, "A") : "—（未入力）",
@@ -527,10 +282,10 @@
             note: alNoGap_nH > 0 ? `無ギャップAL補正込みgも併記 / ${npForGapNote}` : `コア透磁率を無限大とした簡易g / ${npForGapNote}`
           };
         }else{
-          messages.push("▲ 目標Lm/Lモード：Ltargetを入力すると必要ギャップgを計算します。Ipk未入力時はIpk関連のみ未計算です。Np_gapは0なら一次巻数Npを自動使用します");
+          messages.push("▲ 目標Lモード：Ltargetを入力すると必要ギャップgを計算します。Ipk未入力時はIpk関連のみ未計算です。Np_gapは0なら一次巻数Npを自動使用します");
         }
       }else if(gapMode === "given_g"){
-        indRows.mode = "ギャップ長gからLm/Lを計算";
+        indRows.mode = "ギャップ長gからLを計算";
         if(gapG_mm > 0 && npForGap > 0){
           const gap_m = gapG_mm * 1e-3;
           const alSimple_H = MU0 * ae / gap_m;
@@ -565,7 +320,7 @@
           }
 
           indRows = {
-            mode: "ギャップ長gからLm/Lを計算",
+            mode: "ギャップ長gからLを計算",
             indL: fmt(indL_calc_uH, 2, "µH"),
             indN: `${fmt(npForGap, 0, "turn")}（${npForGapNote}）`,
             indIpk: hasIndIpk ? fmt(indIpk, 2, "A") : "—（未入力）",
@@ -582,7 +337,7 @@
             note: `${note} / ${npForGapNote}`
           };
         }else{
-          messages.push("▲ g指定モード：gを入力すると、そのギャップでのLm/Lを計算します。Ipk未入力時はIpk関連のみ未計算です。Np_gapは0なら一次巻数Npを自動使用します");
+          messages.push("▲ g指定モード：gを入力すると、そのギャップでのLを計算します。Ipk未入力時はIpk関連のみ未計算です。Np_gapは0なら一次巻数Npを自動使用します");
         }
       }else{
         messages.push("ℹ ギャップなし：通常トランス想定です。AL値を入れるとLm目安のみ表示します");
@@ -590,7 +345,7 @@
 
       addRow(rows, "ギャップ", "計算モード", indRows.mode);
       addRow(rows, "ギャップ", "計算メモ", indRows.note);
-      addRow(rows, "ギャップ/インダクタ", designMode === "llc" ? "目標/計算 励磁インダクタンス Lm" : "目標/計算インダクタンス L", indRows.indL);
+      addRow(rows, "ギャップ/インダクタ", "目標/計算インダクタンス L", indRows.indL);
       addRow(rows, "ギャップ/インダクタ", "Lm計算に使用した巻数 N", indRows.indN);
       addRow(rows, "ギャップ/インダクタ", "ピーク電流 Ipk", indRows.indIpk);
       addRow(rows, "ギャップ/インダクタ", "Bpk = L×Ipk/(N×Ae)", indRows.bInd);
@@ -603,20 +358,6 @@
       addRow(rows, "ギャップ", "中央脚片側ギャップ目安", indRows.gapHalf);
       addRow(rows, "インダクタ", "H目安 = N×Ipk/le", indRows.hApprox);
       addRow(rows, "ギャップ", "無ギャップAL補正込み lgap", indRows.gapFromAl);
-
-      if(designMode === "llc"){
-        if(gapMode === "none"){
-          messages.push("ℹ LLCモード：Lmを狙う場合は、ギャップ計算モードを『目標Lm/Lから必要g』または『gからLm/L』にします");
-        }
-        addRow(rows, "LLCまとめ", "一次巻数 Np", fmt(np, 0, "turn"));
-        addRow(rows, "LLCまとめ", "二次巻数 Ns 採用値", `${fmt(ns, 0, "turn")}（切り上げ）`);
-        addRow(rows, "LLCまとめ", "実際の巻数比 Np/Ns", fmt(actualRatio, 2, ""));
-        addRow(rows, "LLCまとめ", "目標/計算Lm", indRows.indL);
-        addRow(rows, "LLCまとめ", "必要/指定ギャップ g", indRows.gap);
-        addRow(rows, "LLCまとめ", "ギャップ後AL", indRows.alGapped);
-        addRow(rows, "LLCまとめ", "Bpk", indRows.bInd);
-        addRow(rows, "LLCまとめ", "Isat目安", indRows.iSat);
-      }
 
       resultMessage.innerHTML = messages.join("<br>");
       resultTable.innerHTML = `
@@ -670,6 +411,4 @@
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
-  </script>
-</body>
-</html>
+  
