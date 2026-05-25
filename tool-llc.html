@@ -1,130 +1,223 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LLC設計ツール | 回路エンジニアの部屋</title>
-  <link rel="stylesheet" href="./style.css">
-  <link rel="stylesheet" href="./llc-tool.css">
-</head>
+:root {
+  --bg: #f6f8fb;
+  --panel: #ffffff;
+  --text: #1f2937;
+  --muted: #667085;
+  --line: #d9e0ea;
+  --accent: #2563eb;
+  --accent2: #0f766e;
+  --warn: #b45309;
+  --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  --radius: 16px;
+}
 
-<body>
-<header class="site-header" id="siteHeader">
-  <div class="container header-inner">
-    <a class="logo" href="./index.html">回路エンジニアの部屋</a>
-    <nav class="nav">
-      <a href="./index.html">ホーム</a>
-      <a href="./tools.html">ツール</a>
-      <a href="./articles.html">記事</a>
-      <a href="./index.html#about">このサイトについて</a>
-    </nav>
-  </div>
-</header>
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  line-height: 1.65;
+}
 
-<main>
-  <section class="hero">
-    <div class="container">
-      <p class="hero-label">LLC Resonant Converter</p>
-      <h1>LLC設計ツール</h1>
-      <p class="hero-text">巻数比、共振定数、ZVS目安、ゲイン特性を確認します。</p>
-    </div>
-  </section>
+.site-header {
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.header-inner {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+.site-title {
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+.site-nav { display: flex; gap: 16px; }
+.site-nav a {
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 600;
+}
+.site-nav a:hover { color: var(--accent); }
 
-  <section class="section">
-    <div class="container">
-
-      <div class="layout">
-        <section class="panel">
-          <h2>入力条件</h2>
-
-          <form id="llcForm">
-            <div class="grid two">
-              <label>入力方式
-                <select id="bridgeType">
-                  <option value="half">ハーフブリッジ</option>
-                  <option value="full">フルブリッジ</option>
-                </select>
-              </label>
-
-              <label>二次整流方式
-                <select id="rectifierType">
-                  <option value="sync">同期整流</option>
-                  <option value="center">センタタップ</option>
-                  <option value="bridge">ブリッジ整流</option>
-                </select>
-              </label>
-
-              <label>Vbus,min [V]<input id="vbusMin" type="number" step="any" value="360"></label>
-              <label>Vbus,nom [V]<input id="vbusNom" type="number" step="any" value="390"></label>
-              <label>Vbus,max [V]<input id="vbusMax" type="number" step="any" value="420"></label>
-              <label>出力電圧 Vout [V]<input id="vout" type="number" step="any" value="24"></label>
-              <label>出力電力 Pout [W]<input id="pout" type="number" step="any" value="600"></label>
-              <label>効率見込み η [%]<input id="efficiency" type="number" step="any" value="96"></label>
-              <label>共振周波数 fr [kHz]<input id="frKhz" type="number" step="any" value="130"></label>
-              <label>特性インピーダンス Zr [Ω]<input id="zr" type="number" step="any" value="5"></label>
-              <label>Lm/Lr 比 m<input id="mRatio" type="number" step="any" value="6"></label>
-              <label>ダイオード降下 Vf [V]<input id="diodeVf" type="number" step="any" value="0.5"></label>
-              <label>ZVS確認周波数 [kHz]<input id="zvsFreqKhz" type="number" step="any" value="180"></label>
-              <label>Csw合計 [pF]<input id="cswPf" type="number" step="any" value="500"></label>
-              <label>デッドタイム [ns]<input id="deadtimeNs" type="number" step="any" value="200"></label>
-            </div>
-
-            <div class="buttons">
-              <button type="submit">計算する</button>
-              <button type="button" id="resetBtn">初期値に戻す</button>
-              <button type="button" id="csvBtn">CSV出力</button>
-              <button type="button" id="pngBtn">PNG出力</button>
-            </div>
-          </form>
-        </section>
-
-        <aside class="panel result-panel">
-          <h2>計算結果</h2>
-
-          <div class="summary-cards">
-            <div class="summary-card"><div class="label">巻数比</div><div class="value" id="summaryN">-</div></div>
-            <div class="summary-card"><div class="label">Lr</div><div class="value" id="summaryLr">-</div></div>
-            <div class="summary-card"><div class="label">Cr</div><div class="value" id="summaryCr">-</div></div>
-            <div class="summary-card"><div class="label">Lm</div><div class="value" id="summaryLm">-</div></div>
-          </div>
-
-          <div class="chart-wrap">
-            <canvas id="gainChart" width="720" height="420"></canvas>
-          </div>
-
-          <div class="legend">
-            <span><i class="line qlow"></i> Q低め</span>
-            <span><i class="line qmid"></i> Q基準</span>
-            <span><i class="line qhigh"></i> Q高め</span>
-            <span><i class="line req"></i> 必要ゲイン</span>
-          </div>
-        </aside>
-      </div>
-
-      <section class="panel steps-panel">
-        <div class="step-card"><h2>STEP1：基本条件</h2><div id="step1Result">未計算</div></div>
-        <div class="step-card"><h2>STEP2：等価負荷</h2><div id="step2Result">未計算</div></div>
-        <div class="step-card">
-          <h2>STEP3：理想巻数比の計算</h2>
-          <p class="hint">Vbus,max基準で n = Np / Ns を計算します。初期設計では Ns = 1 として扱います。</p>
-          <div id="step3Result">未計算</div>
-        </div>
-        <div class="step-card"><h2>STEP4：共振定数 Lr / Cr</h2><div id="step4Result">未計算</div></div>
-        <div class="step-card"><h2>STEP5：励磁インダクタンス Lm</h2><div id="step5Result">未計算</div></div>
-        <div class="step-card"><h2>STEP6：ZVS目安</h2><div id="step6Result">未計算</div></div>
-      </section>
-
-    </div>
-  </section>
-</main>
-
-<footer class="site-footer">
-  <div class="container footer-inner">
-    <p>© <span id="currentYear"></span> 回路エンジニアの部屋</p>
-  </div>
-</footer>
-
-<script src="./script.js"></script>
-<script src="./llc-tool.js"></script>
-</body>
-</html>
+.container {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 20px 64px;
+}
+.hero {
+  background: linear-gradient(135deg, #fff, #eef5ff);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 30px;
+  box-shadow: var(--shadow);
+  margin-bottom: 18px;
+}
+.eyebrow {
+  color: var(--accent);
+  font-weight: 800;
+  margin: 0 0 6px;
+  letter-spacing: .08em;
+  font-size: 0.85rem;
+}
+h1 { margin: 0 0 10px; font-size: clamp(2rem, 4vw, 3rem); }
+h2 { margin: 0 0 18px; font-size: 1.35rem; }
+h3 { margin: 0 0 12px; font-size: 1.05rem; }
+p { margin-top: 0; }
+.notice {
+  background: #fff7ed;
+  border: 1px solid #fed7aa;
+  color: #7c2d12;
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 22px;
+}
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(380px, .95fr);
+  gap: 22px;
+  align-items: start;
+}
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+.result-panel { position: sticky; top: 82px; }
+.step-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 14px;
+  background: #fbfdff;
+}
+.grid { display: grid; gap: 12px; }
+.grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+label {
+  display: grid;
+  gap: 5px;
+  font-weight: 700;
+  color: #344054;
+  font-size: .92rem;
+}
+input, select {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 10px 11px;
+  font: inherit;
+  background: #fff;
+  color: var(--text);
+}
+input:focus, select:focus {
+  outline: 2px solid rgba(37, 99, 235, .2);
+  border-color: var(--accent);
+}
+.formula {
+  margin: 12px 0 0;
+  color: #334155;
+  background: #f1f5f9;
+  padding: 9px 11px;
+  border-radius: 10px;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+.hint {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: .9rem;
+}
+.buttons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; }
+button {
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  padding: 10px 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+button:nth-child(2) { background: var(--accent2); }
+button:nth-child(3) { background: #475569; }
+button:hover { filter: brightness(.95); }
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 22px;
+}
+.summary-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+  background: #fbfdff;
+}
+.summary-card .label { color: var(--muted); font-size: .85rem; font-weight: 700; }
+.summary-card .value { font-size: 1.45rem; font-weight: 900; margin-top: 4px; }
+.results-list { display: grid; gap: 10px; margin-bottom: 24px; }
+.result-row {
+  border-left: 4px solid var(--accent);
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.result-row strong { display: block; margin-bottom: 2px; }
+.result-row code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: #0f172a;
+  white-space: normal;
+}
+.chart-wrap {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px;
+  background: #fff;
+  overflow-x: auto;
+}
+canvas { max-width: 100%; height: auto; }
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  color: var(--muted);
+  font-size: .9rem;
+  margin-top: 10px;
+}
+.line { display: inline-block; width: 28px; height: 3px; border-radius: 999px; vertical-align: middle; }
+.qlow { background: #94a3b8; }
+.qmid { background: #2563eb; }
+.qhigh { background: #0f766e; }
+.req { background: #b45309; }
+.site-footer {
+  border-top: 1px solid var(--line);
+  background: #fff;
+  text-align: center;
+  color: var(--muted);
+  padding: 18px;
+}
+@media (max-width: 980px) {
+  .layout { grid-template-columns: 1fr; }
+  .result-panel { position: static; }
+}
+@media (max-width: 680px) {
+  .header-inner { flex-direction: column; align-items: flex-start; }
+  .grid.two, .grid.three, .summary-cards { grid-template-columns: 1fr; }
+  .hero { padding: 22px; }
+}
+.legend-note {
+  color: #475569;
+  font-size: 0.9rem;
+}
