@@ -1,15 +1,24 @@
 'use strict';
 
 const $ = (id) => document.getElementById(id);
-const ids = [
-  'vout','pout','eff','rectType','vbusMin','vbusNom','vbusMax','vf','mAtFr','nsTurns','turnRoundMode','nManual',
-  'fr','k','qDesign','lrActual','crActual','lmActual','fMin','fMax','plotMode','qList','powerList','qStart','qEnd','qStep','gMin','gMax','fzvs','cossTotal','deadTime'
+const inputIds = [
+  'vinMin','vinNom','vinMax','voutMin','voutNom','voutMax','pout','pmax','eff','vf','nsTurns','turnRoundMode','nManual',
+  'fSwMax','fSwMin','frRatio','frH','plotFMin','plotFMax','qMin','qMax','qStep','qManual','powerList','gainYMax',
+  'lrActual','crActual','lmActual','fChk','cSw','deadTime'
 ];
 
 function num(id, fallback = 0) {
   const el = $(id);
+  if (!el) return fallback;
   const v = parseFloat(el.value);
   return Number.isFinite(v) ? v : fallback;
+}
+
+function maybeNum(id) {
+  const el = $(id);
+  if (!el || String(el.value).trim() === '') return NaN;
+  const v = parseFloat(el.value);
+  return Number.isFinite(v) ? v : NaN;
 }
 
 function fmt(v, digits = 3) {
@@ -21,147 +30,182 @@ function fmt(v, digits = 3) {
   return v.toFixed(digits);
 }
 
+function clamp(v, min, max) {
+  return Math.min(max, Math.max(min, v));
+}
+
+function uniqueSorted(values) {
+  return values
+    .filter(v => Number.isFinite(v) && v > 0)
+    .filter((v, i, arr) => arr.findIndex(x => Math.abs(x - v) < 0.001) === i)
+    .sort((a, b) => a - b);
+}
+
 function llcGain(x, q, k) {
   // FHA normalized LLC gain approximation.
-  // x = f / fr, k = Lm / Lr, q = sqrt(Lr/Cr) / Racp
+  // x = f / frH, k = Lm / Lr, q = sqrt(Lr/Cr) / Racp
   if (x <= 0 || q <= 0 || k <= 0) return NaN;
-  const a = 1 - 1 / (x * x);
-  const b = x / k - 1 / (k * x);
-  const den = Math.sqrt(Math.pow(1 + a / k, 2) + Math.pow(q * (x - 1 / x), 2));
+  const den = Math.sqrt(
+    Math.pow(1 + (1 - 1 / (x * x)) / k, 2) +
+    Math.pow(q * (x - 1 / x), 2)
+  );
   const m = 1 / den;
-  if (!Number.isFinite(m)) return NaN;
-  return m;
+  return Number.isFinite(m) ? m : NaN;
 }
 
-
-function plotMode() {
-  return $('plotMode')?.value || 'q';
-}
-
-function parsePowerSeries(basePout) {
-  const listText = ($('powerList')?.value || '').trim();
+function parsePowerSeries(pout, pmax) {
+  const text = ($('powerList')?.value || '').trim();
   let values = [];
-  if (listText) {
-    values = listText
-      .split(/[,、\s]+/)
-      .map(v => parseFloat(v))
-      .filter(v => Number.isFinite(v) && v > 0);
+  if (text) {
+    values = text.split(/[,、\s]+/).map(v => parseFloat(v));
   }
-  if (!values.length && Number.isFinite(basePout) && basePout > 0) {
-    values = [basePout * 0.25, basePout * 0.5, basePout, basePout * 1.25];
-  }
-  values = values.filter((v, i, arr) => arr.findIndex(x => Math.abs(x - v) < 0.001) === i);
-  values.sort((a, b) => a - b);
-  return values.slice(0, 12);
+  if (!values.length) values = [50, 100, 200, 300, 400, 500, pout, pmax];
+  return uniqueSorted(values).slice(0, 14);
 }
 
-function qAtPower(c, pW) {
-  // Same Lr/Cr/Lm and turns ratio, load only changed.
-  // Rac(primary) is proportional to 1/Pout, so Q is proportional to Pout.
-  if (!Number.isFinite(pW) || pW <= 0 || !Number.isFinite(c.inputs.pout) || c.inputs.pout <= 0) return NaN;
-  return c.qActual * (pW / c.inputs.pout);
+function qForPower(c, p) {
+  if (!Number.isFinite(p) || p <= 0 || c.inputs.pout <= 0) return NaN;
+  return c.qUse * (p / c.inputs.pout);
 }
 
-function parseQSeries(qActual) {
-  const listText = ($('qList')?.value || '').trim();
-  let values = [];
-  if (listText) {
-    values = listText
-      .split(/[,、\s]+/)
-      .map(v => parseFloat(v))
-      .filter(v => Number.isFinite(v) && v > 0);
-  } else {
-    const start = Math.max(0.01, num('qStart', 0.2));
-    const end = Math.max(start, num('qEnd', 1.0));
-    const step = Math.max(0.01, num('qStep', 0.2));
-    for (let q = start; q <= end + step / 2; q += step) values.push(Number(q.toFixed(4)));
-  }
-
-  // 実Qは必ず太線で表示。重複が近いQは省く。
-  values = values.filter((v, i, arr) => arr.findIndex(x => Math.abs(x - v) < 0.0005) === i);
-  values = values.filter(v => Math.abs(v - qActual) > 0.0005);
-  return values.slice(0, 12);
+function gainFor(c, fKHz, pW) {
+  const q = qForPower(c, pW);
+  const x = (fKHz * 1000) / c.frHActual;
+  return llcGain(x, q, c.kActual);
 }
 
-function qSeriesText(c) {
-  const values = parseQSeries(c.qActual);
-  if (plotMode() === 'power') {
-    const powers = parsePowerSeries(c.inputs.pout);
-    const label = powers.length ? powers.map(p => `${fmt(p, 1)}W(Q=${fmt(qAtPower(c, p), 3)})`).join(' / ') : 'なし';
-    return `出力電力別 fsw-Gp：${label}`;
+function voutFor(c, vin, fKHz, pW) {
+  const g = gainFor(c, fKHz, pW);
+  if (!Number.isFinite(g)) return NaN;
+  return (vin * g) / (2 * c.n) - c.inputs.vf;
+}
+
+function maxGainInRange(k, q, frH, fMinK, fMaxK) {
+  let max = -Infinity;
+  let fAt = NaN;
+  for (let i = 0; i <= 500; i++) {
+    const f = fMinK + (fMaxK - fMinK) * i / 500;
+    const g = llcGain((f * 1000) / frH, q, k);
+    if (Number.isFinite(g) && g > max) {
+      max = g;
+      fAt = f;
+    }
   }
-  const label = values.length ? values.map(v => fmt(v, 3)).join(' / ') : 'なし';
-  return `実Q ${fmt(c.qActual, 3)}、比較Q ${label}`;
+  return { max, fAt };
 }
 
 function calculate() {
-  const vout = num('vout', 24);
+  const vinMin = num('vinMin', 360);
+  const vinNom = num('vinNom', 400);
+  const vinMax = num('vinMax', 420);
+  const voutMin = num('voutMin', 18);
+  const voutNom = num('voutNom', 19);
+  const voutMax = num('voutMax', 20);
   const pout = num('pout', 480);
-  const eff = num('eff', 94) / 100;
-  const vbusMin = num('vbusMin', 360);
-  const vbusNom = num('vbusNom', 390);
-  const vbusMax = num('vbusMax', 420);
-  const vf = num('vf', 0.35);
-  const mAtFr = num('mAtFr', 1);
-  const nsTurns = Math.max(1, Math.round(num('nsTurns', 4)));
-  const turnRoundMode = $('turnRoundMode').value;
-  const nManual = num('nManual', NaN);
-  const frK = num('fr', 135);
-  const fr = frK * 1000;
-  const k = num('k', 5.5);
-  const qDesign = num('qDesign', 0.55);
+  const pmax = num('pmax', 560);
+  const eff = num('eff', 95) / 100;
+  const vf = num('vf', 0.40);
+  const nsTurns = Math.max(1, Math.round(num('nsTurns', 5)));
+  const turnRoundMode = $('turnRoundMode')?.value || 'round';
+  const nManual = maybeNum('nManual');
 
-  const iout = pout / vout;
-  const pin = pout / eff;
-  const rout = (vout * vout) / pout;
-  const nCalc = vbusNom / (2 * mAtFr * (vout + vf));
+  const fSwMaxK = num('fSwMax', 300);
+  const fSwMinK = num('fSwMin', 115);
+  const ratio = Math.max(1.01, num('frRatio', 2.3));
+  const frHDesignK = num('frH', 230);
+  const frHDesign = frHDesignK * 1000;
+  const frLDesignK = frHDesignK / ratio;
+  const kDesign = ratio * ratio - 1;
+
+  // Vinmax / Voutmin basis. This prevents excessive output voltage at high bus and low output setting.
+  const nCalc = vinMax / (2 * (voutMin + vf));
   const npCalc = nCalc * nsTurns;
   let npUse = npCalc;
-  if (turnRoundMode === 'ceil') npUse = Math.ceil(npCalc);
+  if (turnRoundMode === 'ceil') npUse = Math.max(1, Math.ceil(npCalc));
   if (turnRoundMode === 'floor') npUse = Math.max(1, Math.floor(npCalc));
   if (turnRoundMode === 'round') npUse = Math.max(1, Math.round(npCalc));
-  let n = npUse / nsTurns;
-  if (turnRoundMode === 'none') n = nCalc;
+  let n = turnRoundMode === 'none' ? nCalc : npUse / nsTurns;
   if (turnRoundMode === 'manual' && Number.isFinite(nManual) && nManual > 0) {
     n = nManual;
     npUse = n * nsTurns;
   }
-  const racSec = 8 * rout / (Math.PI * Math.PI);
+
+  const ioutNom = pout / voutNom;
+  const ioutMax = pmax / voutMin;
+  const pin = pout / eff;
+  const routNom = (voutNom * voutNom) / pout;
+  const routMaxLoad = (voutMax * voutMax) / pout;
+  const racSec = 8 * routNom / (Math.PI * Math.PI);
   const racPri = n * n * racSec;
-  const zr = qDesign * racPri;
-  const lr = zr / (2 * Math.PI * fr);
-  const cr = 1 / (Math.pow(2 * Math.PI * fr, 2) * lr);
-  const lm = k * lr;
 
-  const lrUse = num('lrActual', lr * 1e6) * 1e-6;
-  const crUse = num('crActual', cr * 1e9) * 1e-9;
-  const lmUse = num('lmActual', lm * 1e6) * 1e-6;
-  const frActual = 1 / (2 * Math.PI * Math.sqrt(lrUse * crUse));
+  const gReqLow = 2 * n * (voutMax + vf) / vinMin;
+  const gReqNom = 2 * n * (voutNom + vf) / vinNom;
+  const gReqHigh = 2 * n * (voutMin + vf) / vinMax;
+  const gReqMax = Math.max(gReqLow, gReqNom, gReqHigh);
+  const gReqMin = Math.min(gReqLow, gReqNom, gReqHigh);
+
+  const qMin = Math.max(0.01, num('qMin', 0.15));
+  const qMax = Math.max(qMin, num('qMax', 1.2));
+  const qStep = Math.max(0.001, num('qStep', 0.01));
+  const candidates = [];
+  for (let q = qMin; q <= qMax + qStep / 2; q += qStep) {
+    const qFixed = Number(q.toFixed(5));
+    const peak = maxGainInRange(kDesign, qFixed, frHDesign, fSwMinK, frHDesignK);
+    const gainAtFmin = llcGain((fSwMinK * 1000) / frHDesign, qFixed, kDesign);
+    candidates.push({ q: qFixed, peakGain: peak.max, peakFreqK: peak.fAt, gainAtFmin, ok: peak.max >= gReqMax });
+  }
+  const okCandidates = candidates.filter(c => c.ok);
+  const qRecommended = okCandidates.length ? okCandidates[okCandidates.length - 1].q : qMin;
+  const qManual = maybeNum('qManual');
+  const qDesign = Number.isFinite(qManual) && qManual > 0 ? qManual : qRecommended;
+  const qSelectedInfo = candidates.reduce((best, cur) => Math.abs(cur.q - qDesign) < Math.abs(best.q - qDesign) ? cur : best, candidates[0] || { q: qDesign, peakGain: NaN, peakFreqK: NaN, gainAtFmin: NaN, ok: false });
+
+  const z0Design = qDesign * racPri;
+  const lrDesign = z0Design / (2 * Math.PI * frHDesign);
+  const crDesign = 1 / (Math.pow(2 * Math.PI * frHDesign, 2) * lrDesign);
+  const lmDesign = kDesign * lrDesign;
+
+  const lrActualInput = maybeNum('lrActual');
+  const crActualInput = maybeNum('crActual');
+  const lmActualInput = maybeNum('lmActual');
+  const lrUse = (Number.isFinite(lrActualInput) ? lrActualInput : lrDesign * 1e6) * 1e-6;
+  const crUse = (Number.isFinite(crActualInput) ? crActualInput : crDesign * 1e9) * 1e-9;
+  const lmUse = (Number.isFinite(lmActualInput) ? lmActualInput : lmDesign * 1e6) * 1e-6;
+
+  const frHActual = 1 / (2 * Math.PI * Math.sqrt(lrUse * crUse));
+  const frHActualK = frHActual / 1000;
+  const frLActual = 1 / (2 * Math.PI * Math.sqrt((lrUse + lmUse) * crUse));
+  const frLActualK = frLActual / 1000;
   const kActual = lmUse / lrUse;
-  const qActual = Math.sqrt(lrUse / crUse) / racPri;
+  const ratioActual = frHActual / frLActual;
+  const z0Actual = Math.sqrt(lrUse / crUse);
+  const qUse = z0Actual / racPri;
 
-  const mReqMinBus = vbusNom / vbusMin;
-  const mReqMaxBus = vbusNom / vbusMax;
+  const fChkK = num('fChk', frHActualK);
+  const fChk = fChkK * 1000;
+  const cSw = num('cSw', 350) * 1e-12;
+  const deadTime = num('deadTime', 150) * 1e-9;
+  const imPk = vinMax / (8 * lmUse * fChk);
+  const imRmsTri = imPk / Math.sqrt(3);
+  const vpriFundRms = Math.SQRT2 * vinNom / Math.PI;
+  const iLoadPriRms = pin / vpriFundRms;
+  const iResRms = Math.sqrt(iLoadPriRms * iLoadPriRms + imRmsTri * imRmsTri);
+  const eLm = 0.5 * lmUse * imPk * imPk;
+  const eCsw = 0.5 * cSw * vinMax * vinMax;
+  const tDeadMin = (cSw * vinMax) / imPk;
+  const zvsEnergyMargin = eLm / eCsw;
+  const deadTimeMargin = deadTime / tDeadMin;
 
-  const fzvsK = num('fzvs', 250);
-  const fzvs = fzvsK * 1000;
-  const cossTotalPf = num('cossTotal', 400);
-  const cossTotal = cossTotalPf * 1e-12;
-  const deadTimeNs = num('deadTime', 120);
-  const deadTimeSet = deadTimeNs * 1e-9;
-  const imPkZvs = vbusMax / (8 * lmUse * fzvs);
-  const eMagZvs = 0.5 * lmUse * imPkZvs * imPkZvs;
-  const eCswZvs = 0.5 * cossTotal * vbusMax * vbusMax;
-  const deadTimeMin = (cossTotal * vbusMax) / imPkZvs;
-  const deadTimeMargin = deadTimeSet / deadTimeMin;
-  const zvsEnergyMargin = eMagZvs / eCswZvs;
-  const qSwRequired = cossTotal * vbusMax;
+  const powers = parsePowerSeries(pout, pmax);
 
   return {
-    inputs: { vout, pout, eff, vbusMin, vbusNom, vbusMax, vf, mAtFr, nsTurns, turnRoundMode, nManual, frK, k, qDesign, fzvsK, cossTotalPf, deadTimeNs },
-    iout, pin, rout, nCalc, npCalc, npUse, n, racSec, racPri, zr, lr, cr, lm,
-    lrUse, crUse, lmUse, frActual, kActual, qActual, mReqMinBus, mReqMaxBus,
-    imPkZvs, eMagZvs, eCswZvs, deadTimeMin, deadTimeMargin, zvsEnergyMargin, qSwRequired
+    inputs: { vinMin, vinNom, vinMax, voutMin, voutNom, voutMax, pout, pmax, eff, vf, nsTurns, turnRoundMode, nManual, fSwMaxK, fSwMinK, ratio, frHDesignK, qMin, qMax, qStep, qManual, fChkK, cSwPf: cSw * 1e12, deadTimeNs: deadTime * 1e9 },
+    nCalc, npCalc, npUse, n, ioutNom, ioutMax, pin, routNom, routMaxLoad, racSec, racPri,
+    frLDesignK, kDesign, gReqLow, gReqNom, gReqHigh, gReqMax, gReqMin,
+    candidates, okCandidates, qRecommended, qDesign, qSelectedInfo,
+    z0Design, lrDesign, crDesign, lmDesign,
+    lrUse, crUse, lmUse, frHActual, frHActualK, frLActual, frLActualK, kActual, ratioActual, z0Actual, qUse,
+    powers, imPk, imRmsTri, iLoadPriRms, iResRms, eLm, eCsw, tDeadMin, zvsEnergyMargin, deadTimeMargin
   };
 }
 
@@ -169,106 +213,68 @@ function renderSummary(c) {
   const cards = [
     ['使用巻数比 n', `${fmt(c.n, 3)} : 1`],
     ['一次巻数 Np', `${fmt(c.npUse, 2)} turn`],
+    ['frH / frL', `${fmt(c.frHActualK, 2)} / ${fmt(c.frLActualK, 2)} kHz`],
+    ['K = Lm/Lr', `${fmt(c.kActual, 3)}`],
+    ['必要最大ゲイン', `${fmt(c.gReqMax, 3)}`],
+    ['推奨Q', `${fmt(c.qRecommended, 3)}`],
+    ['使用Q', `${fmt(c.qUse, 3)}`],
+    ['Z0', `${fmt(c.z0Actual, 3)} Ω`],
     ['Lr', `${fmt(c.lrUse * 1e6, 3)} µH`],
     ['Cr', `${fmt(c.crUse * 1e9, 3)} nF`],
     ['Lm', `${fmt(c.lmUse * 1e6, 3)} µH`],
-    ['実共振周波数', `${fmt(c.frActual / 1000, 3)} kHz`],
-    ['実Q', `${fmt(c.qActual, 3)}`],
-    ['ZVS確認周波数', `${fmt(c.inputs.fzvsK, 3)} kHz`],
-    ['励磁電流 Im_pk', `${fmt(c.imPkZvs, 3)} A`],
-    ['Lmエネルギー', `${fmt(c.eMagZvs * 1e6, 3)} µJ`],
-    ['Csw必要エネルギー', `${fmt(c.eCswZvs * 1e6, 3)} µJ`],
-    ['SWノード電荷量', `${fmt(c.qSwRequired * 1e9, 3)} nC`],
-    ['最小dead time', `${fmt(c.deadTimeMin * 1e9, 3)} ns`],
-    ['設定/最小dead time', `${fmt(c.deadTimeMargin, 3)} 倍`],
-    ['エネルギー余裕', `${fmt(c.zvsEnergyMargin, 3)} 倍`]
+    ['ゲイン余裕', `${fmt((c.qSelectedInfo?.peakGain || NaN) / c.gReqMax, 3)} 倍`],
+    ['励磁電流 Im_pk', `${fmt(c.imPk, 3)} A`],
+    ['一次換算負荷電流', `${fmt(c.iLoadPriRms, 3)} Arms`],
+    ['共振電流 目安', `${fmt(c.iResRms, 3)} Arms`],
+    ['ZVSエネルギー余裕', `${fmt(c.zvsEnergyMargin, 3)} 倍`]
   ];
   $('summaryCards').innerHTML = cards.map(([label, value]) => `
     <div class="summary-card"><div class="label">${label}</div><div class="value">${value}</div></div>
   `).join('');
 }
 
+function qJudgement(c) {
+  if (!c.okCandidates.length) return '指定範囲内に必要最大ゲインを満たすQ候補がありません。K比、fmin、巻数比、またはQ探索範囲を見直してください。';
+  const qMinOk = c.okCandidates[0].q;
+  const qMaxOk = c.okCandidates[c.okCandidates.length - 1].q;
+  return `必要最大ゲインを満たすQ候補：${fmt(qMinOk, 3)}〜${fmt(qMaxOk, 3)}。推奨は電流を抑えやすい上限側 ${fmt(c.qRecommended, 3)}。`;
+}
+
 function renderSteps(c) {
   const rows = [
-    ['STEP1 出力仕様', `Iout = ${fmt(c.iout, 3)} A / Rout = ${fmt(c.rout, 3)} &#937; / Pin目安 = ${fmt(c.pin, 2)} W`],
-    ['STEP2 入力バス', `Vbus = ${fmt(c.inputs.vbusMin, 1)}〜${fmt(c.inputs.vbusMax, 1)} V、nom = ${fmt(c.inputs.vbusNom, 1)} V`],
-    ['STEP3 巻数比', `n_calc = ${fmt(c.nCalc, 4)}、Np_calc = ${fmt(c.npCalc, 3)} turn、Np_use = ${fmt(c.npUse, 3)} turn、n_use = ${fmt(c.n, 4)}`],
-    ['STEP4 共振条件', `fr = ${fmt(c.inputs.frK, 2)} kHz、k = Lm/Lr = ${fmt(c.inputs.k, 3)}、Qe = ${fmt(c.inputs.qDesign, 3)}`],
-    ['STEP5 反射負荷', `Rac(sec) = ${fmt(c.racSec, 3)} &#937;、Rac(primary) = n² × Rac = ${fmt(c.racPri, 3)} &#937;`],
-    ['STEP6 Lr / Cr', `Lr = ${fmt(c.lr * 1e6, 3)} µH、Cr = ${fmt(c.cr * 1e9, 3)} nF`],
-    ['STEP7 Lm', `Lm = k × Lr = ${fmt(c.lm * 1e6, 3)} µH`],
-    ['STEP8 実部品再計算', `fr(actual) = ${fmt(c.frActual / 1000, 3)} kHz、Q(actual) = ${fmt(c.qActual, 3)}、k(actual) = ${fmt(c.kActual, 3)}`],
-    ['STEP9 ゲイングラフ', `${qSeriesText(c)} をプロット`],
-    ['STEP10 必要ゲイン', `低入力時 Mreq ≈ ${fmt(c.mReqMinBus, 3)}、高入力時 Mreq ≈ ${fmt(c.mReqMaxBus, 3)}`],
-    ['STEP11 励磁電流/ZVSエネルギー', `fchk = ${fmt(c.inputs.fzvsK, 2)} kHz、Im_pk ≈ ${fmt(c.imPkZvs, 3)} A、ELm = ${fmt(c.eMagZvs * 1e6, 3)} µJ、ECsw = ${fmt(c.eCswZvs * 1e6, 3)} µJ、tdead_min ≈ ${fmt(c.deadTimeMin * 1e9, 3)} ns、設定/最小 = ${fmt(c.deadTimeMargin, 3)}`],
-    ['STEP12 保存', `CSV出力で設計条件と導出定数を保存できます。`]
+    ['STEP1 仕様入力', `Vin=${fmt(c.inputs.vinMin, 1)}/${fmt(c.inputs.vinNom, 1)}/${fmt(c.inputs.vinMax, 1)}V、Vout=${fmt(c.inputs.voutMin, 2)}/${fmt(c.inputs.voutNom, 2)}/${fmt(c.inputs.voutMax, 2)}V、Pout=${fmt(c.inputs.pout, 1)}W、Pmax=${fmt(c.inputs.pmax, 1)}W`],
+    ['STEP2 巻数比', `Vinmax・Voutmin基準。n_calc=${fmt(c.nCalc, 4)}、Np_calc=${fmt(c.npCalc, 3)}turn、Np_use=${fmt(c.npUse, 3)}turn、n_use=${fmt(c.n, 4)}`],
+    ['STEP3 周波数条件', `fmin=${fmt(c.inputs.fSwMinK, 1)}kHz、fmax=${fmt(c.inputs.fSwMaxK, 1)}kHz、frH=${fmt(c.inputs.frHDesignK, 1)}kHz、frL=${fmt(c.frLDesignK, 1)}kHz、K=${fmt(c.kDesign, 3)}`],
+    ['STEP4 必要ゲイン', `Vinmin/Voutmax: ${fmt(c.gReqLow, 3)}、Vinnom/Voutnom: ${fmt(c.gReqNom, 3)}、Vinmax/Voutmin: ${fmt(c.gReqHigh, 3)}、必要最大=${fmt(c.gReqMax, 3)}`],
+    ['STEP5 Q選定', `${qJudgement(c)} 使用Q=${fmt(c.qDesign, 3)}、選択Qのピーク=${fmt(c.qSelectedInfo.peakGain, 3)} @ ${fmt(c.qSelectedInfo.peakFreqK, 1)}kHz`],
+    ['STEP6 反射負荷', `Rout(nom)=${fmt(c.routNom, 3)}Ω、Rac(sec)=8Rout/π²=${fmt(c.racSec, 3)}Ω、Rac(primary)=n²Rac=${fmt(c.racPri, 3)}Ω`],
+    ['STEP7 共振部品 推奨値', `Z0=${fmt(c.z0Design, 3)}Ω、Lr=${fmt(c.lrDesign * 1e6, 3)}µH、Cr=${fmt(c.crDesign * 1e9, 3)}nF、Lm=${fmt(c.lmDesign * 1e6, 3)}µH`],
+    ['STEP8 実部品値', `frH=${fmt(c.frHActualK, 3)}kHz、frL=${fmt(c.frLActualK, 3)}kHz、frH/frL=${fmt(c.ratioActual, 3)}、K=${fmt(c.kActual, 3)}、Q=${fmt(c.qUse, 3)}`],
+    ['STEP9 電流目安', `fchk=${fmt(c.inputs.fChkK, 1)}kHz、Im_pk=${fmt(c.imPk, 3)}A、Im_rms≈${fmt(c.imRmsTri, 3)}A、Iload_pri≈${fmt(c.iLoadPriRms, 3)}Arms、Ir≈${fmt(c.iResRms, 3)}Arms`],
+    ['STEP10 ZVS目安', `ELm=${fmt(c.eLm * 1e6, 3)}µJ、ECsw=${fmt(c.eCsw * 1e6, 3)}µJ、tdead_min≈${fmt(c.tDeadMin * 1e9, 3)}ns、設定/最小=${fmt(c.deadTimeMargin, 3)}倍`]
   ];
   $('stepResults').innerHTML = rows.map(([title, body]) => `
     <div class="result-row"><strong>${title}</strong><code>${body}</code></div>
   `).join('');
 }
 
-function drawChart(c) {
-  const canvas = $('gainChart');
-  const ctx = canvas.getContext('2d');
+function chartScales(canvas, xMin, xMax, yMin, yMax) {
   const w = canvas.width;
   const h = canvas.height;
+  const pad = { l: 76, r: 28, t: 38, b: 62 };
+  return {
+    w, h, pad,
+    xToPx: (x) => pad.l + (x - xMin) / (xMax - xMin) * (w - pad.l - pad.r),
+    yToPx: (y) => h - pad.b - (y - yMin) / (yMax - yMin) * (h - pad.t - pad.b)
+  };
+}
+
+function drawBase(ctx, scale, xMin, xMax, yMin, yMax, yLabel, xLabel) {
+  const { w, h, pad, xToPx, yToPx } = scale;
   ctx.clearRect(0, 0, w, h);
-  ctx.save();
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, w, h);
-  ctx.restore();
-
-  const pad = { l: 76, r: 26, t: 38, b: 62 };
-  const fMin = Math.max(1, num('fMin', 60));
-  const fMax = Math.max(fMin + 1, num('fMax', 300));
-  const mode = plotMode();
-  const palette = ['#2563eb', '#0f766e', '#7c3aed', '#0891b2', '#65a30d', '#dc2626', '#9333ea', '#ea580c', '#0284c7', '#16a34a', '#be123c', '#4f46e5'];
-  let series = [];
-
-  if (mode === 'power') {
-    const powers = parsePowerSeries(c.inputs.pout);
-    series = powers.map((p, i) => ({
-      q: qAtPower(c, p),
-      color: palette[i % palette.length],
-      width: Math.abs(p - c.inputs.pout) < 0.001 ? 3 : 2,
-      label: `${fmt(p, 1)}W`,
-      power: p
-    })).filter(s => Number.isFinite(s.q) && s.q > 0);
-    if ($('qSeriesLabel')) {
-      $('qSeriesLabel').textContent = `（出力電力別: ${series.map(s => `${fmt(s.power, 1)}W / Q=${fmt(s.q, 3)}`).join(', ') || 'なし'}）`;
-    }
-  } else {
-    const sweepQs = parseQSeries(c.qActual);
-    series = [
-      { q: c.qActual, color: palette[0], width: 3, label: '実Q' },
-      ...sweepQs.map((q, i) => ({ q, color: palette[(i + 1) % palette.length], width: 1.8, label: `Q=${fmt(q, 3)}` }))
-    ];
-    if ($('qSeriesLabel')) $('qSeriesLabel').textContent = `（比較Q: ${sweepQs.map(q => fmt(q, 3)).join(', ') || 'なし'}）`;
-  }
-
-  if (!series.length) series = [{ q: c.qActual, color: palette[0], width: 3, label: '実Q' }];
-
-  const all = [];
-  for (const s of series) {
-    for (let i = 0; i <= 260; i++) {
-      const f = fMin + (fMax - fMin) * i / 260;
-      const x = (f * 1000) / c.frActual;
-      const m = llcGain(x, s.q, c.kActual);
-      if (Number.isFinite(m) && m < 4) all.push(m);
-    }
-  }
-
-  const autoYMax = Math.max(1.6, Math.min(3.5, Math.ceil(Math.max(...all, c.mReqMinBus) * 10) / 10 + 0.2));
-  let yMin = num('gMin', 0);
-  let yMax = num('gMax', autoYMax);
-  if (!Number.isFinite(yMin)) yMin = 0;
-  if (!Number.isFinite(yMax)) yMax = autoYMax;
-  if (yMax <= yMin) yMax = yMin + 0.5;
-  const xToPx = (f) => pad.l + (f - fMin) / (fMax - fMin) * (w - pad.l - pad.r);
-  const yToPx = (m) => h - pad.b - ((m - yMin) / (yMax - yMin)) * (h - pad.t - pad.b);
-
-  ctx.strokeStyle = '#d9e0ea';
+  ctx.strokeStyle = '#e5e7eb';
   ctx.lineWidth = 1;
   ctx.font = '14px system-ui';
   ctx.fillStyle = '#475569';
@@ -278,146 +284,252 @@ function drawChart(c) {
     ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(w - pad.r, y); ctx.stroke();
     ctx.textAlign = 'right';
     ctx.fillText(yVal.toFixed(2), pad.l - 14, y + 4);
-    ctx.textAlign = 'left';
   }
-  for (let i = 0; i <= 6; i++) {
-    const f = fMin + (fMax - fMin) * i / 6;
-    const x = xToPx(f);
+  for (let i = 0; i <= 7; i++) {
+    const xVal = xMin + (xMax - xMin) * i / 7;
+    const x = xToPx(xVal);
     ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, h - pad.b); ctx.stroke();
     ctx.textAlign = 'center';
-    ctx.fillText(f.toFixed(0), x, h - 28);
-    ctx.textAlign = 'left';
+    ctx.fillText(xVal.toFixed(0), x, h - 28);
   }
-
   ctx.strokeStyle = '#111827';
-  ctx.lineWidth = 2.2;
-  ctx.beginPath();
-  ctx.rect(pad.l, pad.t, w - pad.l - pad.r, h - pad.t - pad.b);
-  ctx.stroke();
-
+  ctx.lineWidth = 2;
+  ctx.strokeRect(pad.l, pad.t, w - pad.l - pad.r, h - pad.t - pad.b);
   ctx.fillStyle = '#111827';
   ctx.font = '15px system-ui';
   ctx.save();
-  ctx.translate(20, pad.t + (h - pad.t - pad.b) / 2);
+  ctx.translate(22, pad.t + (h - pad.t - pad.b) / 2);
   ctx.rotate(-Math.PI / 2);
   ctx.textAlign = 'center';
-  ctx.fillText('Gp / Gain M', 0, 0);
+  ctx.fillText(yLabel, 0, 0);
   ctx.restore();
   ctx.textAlign = 'center';
-  ctx.fillText('fsw [kHz]', pad.l + (w - pad.l - pad.r) / 2, h - 12);
-  ctx.textAlign = 'left';
+  ctx.fillText(xLabel, pad.l + (w - pad.l - pad.r) / 2, h - 12);
+}
 
-  for (const s of series) {
-    ctx.strokeStyle = s.color;
-    ctx.lineWidth = s.width;
+
+
+function drawPlotFrame(ctx, scale) {
+  const { w, h, pad } = scale;
+  ctx.save();
+  ctx.setLineDash([]);
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 2.4;
+  ctx.strokeRect(pad.l, pad.t, w - pad.l - pad.r, h - pad.t - pad.b);
+  ctx.restore();
+}
+
+function drawVerticalLine(ctx, scale, f, label, color, xMin, xMax) {
+  if (f < xMin || f > xMax) return;
+  const { pad, h, xToPx } = scale;
+  const x = xToPx(f);
+  ctx.strokeStyle = color;
+  ctx.setLineDash([5, 5]);
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(x, pad.t); ctx.lineTo(x, h - pad.b); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = color;
+  ctx.font = '13px system-ui';
+  ctx.textAlign = 'left';
+  ctx.fillText(label, x + 5, pad.t + 16);
+}
+
+function drawHorizontalLine(ctx, scale, y, label, color, yMin, yMax) {
+  if (y < yMin || y > yMax) return;
+  const { pad, w, yToPx } = scale;
+  const py = yToPx(y);
+  ctx.strokeStyle = color;
+  ctx.setLineDash([8, 6]);
+  ctx.lineWidth = 1.8;
+  ctx.beginPath(); ctx.moveTo(pad.l, py); ctx.lineTo(w - pad.r, py); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = color;
+  ctx.font = '13px system-ui';
+  ctx.textAlign = 'left';
+  ctx.fillText(label, pad.l + 8, py - 7);
+}
+
+const palette = ['#2563eb', '#0f766e', '#7c3aed', '#0891b2', '#65a30d', '#dc2626', '#9333ea', '#ea580c', '#0284c7', '#16a34a', '#be123c', '#4f46e5', '#475569', '#b45309'];
+
+function drawGainChart(c) {
+  const canvas = $('gainChart');
+  const ctx = canvas.getContext('2d');
+  const xMin = num('plotFMin', 0);
+  const xMax = Math.max(xMin + 10, num('plotFMax', c.inputs.fSwMaxK));
+  const yMin = 0;
+  const yMax = Math.max(0.5, num('gainYMax', 2.0));
+  const scale = chartScales(canvas, xMin, xMax, yMin, yMax);
+  drawBase(ctx, scale, xMin, xMax, yMin, yMax, 'Gp', 'fsw [kHz]');
+
+  c.powers.forEach((p, idx) => {
+    ctx.strokeStyle = palette[idx % palette.length];
+    ctx.lineWidth = Math.abs(p - c.inputs.pout) < 0.001 ? 3 : 2;
     ctx.beginPath();
     let started = false;
-    for (let i = 0; i <= 520; i++) {
-      const f = fMin + (fMax - fMin) * i / 520;
-      const xNorm = (f * 1000) / c.frActual;
-      const m = llcGain(xNorm, s.q, c.kActual);
-      if (!Number.isFinite(m)) continue;
-      const x = xToPx(f);
-      const y = yToPx(Math.min(Math.max(m, yMin), yMax));
+    for (let i = 0; i <= 700; i++) {
+      const f = xMin + (xMax - xMin) * i / 700;
+      const g = gainFor(c, f, p);
+      if (!Number.isFinite(g)) continue;
+      const x = scale.xToPx(f);
+      const y = scale.yToPx(clamp(g, yMin, yMax));
       if (!started) { ctx.moveTo(x, y); started = true; }
       else ctx.lineTo(x, y);
     }
     ctx.stroke();
-  }
+  });
 
-  // Required gain guide line at minimum bus.
-  ctx.strokeStyle = '#b45309';
-  ctx.setLineDash([8, 6]);
-  ctx.lineWidth = 2;
-  const yReq = yToPx(c.mReqMinBus);
-  ctx.beginPath(); ctx.moveTo(pad.l, yReq); ctx.lineTo(w - pad.r, yReq); ctx.stroke();
-  ctx.setLineDash([]);
-  ctx.fillStyle = '#b45309';
-  ctx.fillText(`Mreq low line = ${fmt(c.mReqMinBus, 2)}`, pad.l + 10, yReq - 8);
+  drawHorizontalLine(ctx, scale, c.gReqLow, `Vinmin Voutmax ${fmt(c.gReqLow, 2)}`, '#b45309', yMin, yMax);
+  drawHorizontalLine(ctx, scale, c.gReqHigh, `Vinmax Voutmin ${fmt(c.gReqHigh, 2)}`, '#64748b', yMin, yMax);
+  drawVerticalLine(ctx, scale, c.inputs.fSwMinK, 'fmin', '#dc2626', xMin, xMax);
+  drawVerticalLine(ctx, scale, c.frLActualK, 'frL', '#0f766e', xMin, xMax);
+  drawVerticalLine(ctx, scale, c.frHActualK, 'frH', '#475569', xMin, xMax);
+  drawVerticalLine(ctx, scale, c.inputs.fSwMaxK, 'fmax', '#2563eb', xMin, xMax);
 
-  // fr actual vertical line.
-  const frK = c.frActual / 1000;
-  if (frK >= fMin && frK <= fMax) {
-    const xFr = xToPx(frK);
-    ctx.strokeStyle = '#64748b';
-    ctx.setLineDash([4, 5]);
-    ctx.beginPath(); ctx.moveTo(xFr, pad.t); ctx.lineTo(xFr, h - pad.b); ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.fillStyle = '#64748b';
-    ctx.fillText('fr', xFr + 6, pad.t + 16);
-  }
+  drawPlotFrame(ctx, scale);
 
-  // In-chart legend for power mode. Keeps the curves readable after PNG export.
-  if (mode === 'power') {
-    const lx = w - pad.r - 150;
-    let ly = pad.t + 18;
-    ctx.font = '13px system-ui';
-    ctx.textAlign = 'left';
-    for (const s of series.slice(0, 8)) {
-      ctx.strokeStyle = s.color;
-      ctx.lineWidth = s.width;
-      ctx.beginPath(); ctx.moveTo(lx, ly - 4); ctx.lineTo(lx + 24, ly - 4); ctx.stroke();
-      ctx.fillStyle = '#334155';
-      ctx.fillText(`${s.label}  Q=${fmt(s.q, 3)}`, lx + 30, ly);
-      ly += 18;
+  renderLegend('gainLegend', c.powers.map((p, i) => ({ color: palette[i % palette.length], text: `${fmt(p, 0)}W / Q=${fmt(qForPower(c, p), 3)}` })));
+}
+
+function drawVoChart(c) {
+  const canvas = $('voChart');
+  const ctx = canvas.getContext('2d');
+  const xMin = num('plotFMin', 0);
+  const xMax = Math.max(xMin + 10, num('plotFMax', c.inputs.fSwMaxK));
+  const yMin = Math.max(0, c.inputs.voutMin * 0.65);
+  const yMax = Math.max(c.inputs.voutMax * 1.35, c.inputs.voutMax + 5);
+  const scale = chartScales(canvas, xMin, xMax, yMin, yMax);
+  drawBase(ctx, scale, xMin, xMax, yMin, yMax, 'Vout [V]', 'fsw [kHz]');
+
+  const cases = [
+    { vin: c.inputs.vinMax, p: Math.min(...c.powers), label: `Vin=${fmt(c.inputs.vinMax, 0)}V P=${fmt(Math.min(...c.powers), 0)}W`, color: '#2563eb', width: 2 },
+    { vin: c.inputs.vinMax, p: c.inputs.pout, label: `Vin=${fmt(c.inputs.vinMax, 0)}V P=${fmt(c.inputs.pout, 0)}W`, color: '#0f766e', width: 2.5 },
+    { vin: c.inputs.vinNom, p: c.inputs.pout, label: `Vin=${fmt(c.inputs.vinNom, 0)}V P=${fmt(c.inputs.pout, 0)}W`, color: '#7c3aed', width: 2.5 },
+    { vin: c.inputs.vinMin, p: c.inputs.pout, label: `Vin=${fmt(c.inputs.vinMin, 0)}V P=${fmt(c.inputs.pout, 0)}W`, color: '#ea580c', width: 2.5 },
+    { vin: c.inputs.vinMin, p: c.inputs.pmax, label: `Vin=${fmt(c.inputs.vinMin, 0)}V P=${fmt(c.inputs.pmax, 0)}W`, color: '#dc2626', width: 3 }
+  ];
+
+  cases.forEach(s => {
+    ctx.strokeStyle = s.color;
+    ctx.lineWidth = s.width;
+    ctx.beginPath();
+    let started = false;
+    for (let i = 0; i <= 700; i++) {
+      const f = xMin + (xMax - xMin) * i / 700;
+      const vo = voutFor(c, s.vin, f, s.p);
+      if (!Number.isFinite(vo)) continue;
+      const x = scale.xToPx(f);
+      const y = scale.yToPx(clamp(vo, yMin, yMax));
+      if (!started) { ctx.moveTo(x, y); started = true; }
+      else ctx.lineTo(x, y);
     }
-  }
+    ctx.stroke();
+  });
+
+  drawHorizontalLine(ctx, scale, c.inputs.voutMin, `Vout min ${fmt(c.inputs.voutMin, 1)}V`, '#64748b', yMin, yMax);
+  drawHorizontalLine(ctx, scale, c.inputs.voutNom, `Vout nom ${fmt(c.inputs.voutNom, 1)}V`, '#b45309', yMin, yMax);
+  drawHorizontalLine(ctx, scale, c.inputs.voutMax, `Vout max ${fmt(c.inputs.voutMax, 1)}V`, '#dc2626', yMin, yMax);
+  drawVerticalLine(ctx, scale, c.inputs.fSwMinK, 'fmin', '#dc2626', xMin, xMax);
+  drawVerticalLine(ctx, scale, c.frLActualK, 'frL', '#0f766e', xMin, xMax);
+  drawVerticalLine(ctx, scale, c.frHActualK, 'frH', '#475569', xMin, xMax);
+  drawVerticalLine(ctx, scale, c.inputs.fSwMaxK, 'fmax', '#2563eb', xMin, xMax);
+
+  drawPlotFrame(ctx, scale);
+
+  renderLegend('voLegend', cases.map(s => ({ color: s.color, text: s.label })));
+}
+
+function renderLegend(id, items) {
+  const el = $(id);
+  if (!el) return;
+  el.innerHTML = items.map(item => `<span class="line" style="background:${item.color}"></span>${item.text}`).join(' ');
 }
 
 function resultText(c) {
-  return [
-    'LLC設計結果',
-    `Vout,${c.inputs.vout},V`,
-    `Pout,${c.inputs.pout},W`,
-    `Iout,${fmt(c.iout, 6)},A`,
-    `Rout,${fmt(c.rout, 6)},ohm`,
-    `Vbus_min,${c.inputs.vbusMin},V`,
-    `Vbus_nom,${c.inputs.vbusNom},V`,
-    `Vbus_max,${c.inputs.vbusMax},V`,
-    `turns_ratio_calc_Np_Ns,${fmt(c.nCalc, 6)},-`,
-    `secondary_turns_Ns,${fmt(c.inputs.nsTurns, 6)},turn`,
-    `primary_turns_calc_Np,${fmt(c.npCalc, 6)},turn`,
-    `turn_round_mode,${c.inputs.turnRoundMode},-`,
-    `primary_turns_use_Np,${fmt(c.npUse, 6)},turn`,
-    `turns_ratio_use_Np_Ns,${fmt(c.n, 6)},-`,
-    `Rac_secondary,${fmt(c.racSec, 6)},ohm`,
-    `Rac_primary,${fmt(c.racPri, 6)},ohm`,
-    `fr_design,${c.inputs.frK},kHz`,
-    `Q_design,${c.inputs.qDesign},-`,
-    `k_design,${c.inputs.k},-`,
-    `Lr_design,${fmt(c.lr * 1e6, 6)},uH`,
-    `Cr_design,${fmt(c.cr * 1e9, 6)},nF`,
-    `Lm_design,${fmt(c.lm * 1e6, 6)},uH`,
-    `Lr_actual,${fmt(c.lrUse * 1e6, 6)},uH`,
-    `Cr_actual,${fmt(c.crUse * 1e9, 6)},nF`,
-    `Lm_actual,${fmt(c.lmUse * 1e6, 6)},uH`,
-    `fr_actual,${fmt(c.frActual / 1000, 6)},kHz`,
-    `Q_actual,${fmt(c.qActual, 6)},-`,
-    `k_actual,${fmt(c.kActual, 6)},-`,
-    `plot_mode,${plotMode()},-`,
-    `Q_plot_list,${($('qList')?.value || '').replace(/,/g, ' / ')},-`,
-    `Power_plot_list,${($('powerList')?.value || '').replace(/,/g, ' / ')},W`,
-    `Q_start,${num('qStart', 0.2)},-`,
-    `Q_end,${num('qEnd', 1.0)},-`,
-    `Q_step,${num('qStep', 0.1)},-`,
-    `Gain_axis_min,${num('gMin', 0)},-`,
-    `Gain_axis_max,${num('gMax', 2.0)},-`,
-    `ZVS_check_frequency,${c.inputs.fzvsK},kHz`,
-    `ZVS_switch_node_capacitance_Csw,${c.inputs.cossTotalPf},pF`,
-    `ZVS_dead_time_setting,${c.inputs.deadTimeNs},ns`,
-    `ZVS_magnetizing_current_peak,${fmt(c.imPkZvs, 6)},A`,
-    `ZVS_switch_node_charge,${fmt(c.qSwRequired * 1e9, 6)},nC`,
-    `ZVS_energy_Lm,${fmt(c.eMagZvs * 1e6, 6)},uJ`,
-    `ZVS_energy_Csw_required,${fmt(c.eCswZvs * 1e6, 6)},uJ`,
-    `ZVS_min_dead_time,${fmt(c.deadTimeMin * 1e9, 6)},ns`,
-    `ZVS_dead_time_setting_over_min,${fmt(c.deadTimeMargin, 6)},-`,
-    `ZVS_energy_margin_ELm_over_ECsw,${fmt(c.zvsEnergyMargin, 6)},-`,
-    `Q_plot_start,${num('qStart', 0.2)},-`,
-    `Q_plot_end,${num('qEnd', 1.0)},-`,
-    `Q_plot_step,${num('qStep', 0.2)},-`,
-    `Mreq_low_bus,${fmt(c.mReqMinBus, 6)},-`,
-    `Mreq_high_bus,${fmt(c.mReqMaxBus, 6)},-`
-  ].join('\n');
+  const rows = [
+    ['item','value','unit'],
+    ['Vin_min', c.inputs.vinMin, 'V'],
+    ['Vin_nom', c.inputs.vinNom, 'V'],
+    ['Vin_max', c.inputs.vinMax, 'V'],
+    ['Vout_min', c.inputs.voutMin, 'V'],
+    ['Vout_nom', c.inputs.voutNom, 'V'],
+    ['Vout_max', c.inputs.voutMax, 'V'],
+    ['Pout', c.inputs.pout, 'W'],
+    ['Pmax', c.inputs.pmax, 'W'],
+    ['efficiency', c.inputs.eff * 100, '%'],
+    ['Vf', c.inputs.vf, 'V'],
+    ['Ns', c.inputs.nsTurns, 'turn'],
+    ['Np_calc', c.npCalc, 'turn'],
+    ['Np_use', c.npUse, 'turn'],
+    ['n_use_Np_over_Ns', c.n, '-'],
+    ['fmin', c.inputs.fSwMinK, 'kHz'],
+    ['fmax', c.inputs.fSwMaxK, 'kHz'],
+    ['frH_design', c.inputs.frHDesignK, 'kHz'],
+    ['frL_design', c.frLDesignK, 'kHz'],
+    ['frH_frL_ratio_design', c.inputs.ratio, '-'],
+    ['K_design', c.kDesign, '-'],
+    ['Gain_required_lowVin_highVout', c.gReqLow, '-'],
+    ['Gain_required_nom', c.gReqNom, '-'],
+    ['Gain_required_highVin_lowVout', c.gReqHigh, '-'],
+    ['Gain_required_max', c.gReqMax, '-'],
+    ['Q_recommended', c.qRecommended, '-'],
+    ['Q_design_selected', c.qDesign, '-'],
+    ['Rout_nom', c.routNom, 'ohm'],
+    ['Rac_secondary', c.racSec, 'ohm'],
+    ['Rac_primary', c.racPri, 'ohm'],
+    ['Z0_design', c.z0Design, 'ohm'],
+    ['Lr_design', c.lrDesign * 1e6, 'uH'],
+    ['Cr_design', c.crDesign * 1e9, 'nF'],
+    ['Lm_design', c.lmDesign * 1e6, 'uH'],
+    ['Z0_actual', c.z0Actual, 'ohm'],
+    ['Lr_actual', c.lrUse * 1e6, 'uH'],
+    ['Cr_actual', c.crUse * 1e9, 'nF'],
+    ['Lm_actual', c.lmUse * 1e6, 'uH'],
+    ['frH_actual', c.frHActualK, 'kHz'],
+    ['frL_actual', c.frLActualK, 'kHz'],
+    ['frH_frL_ratio_actual', c.ratioActual, '-'],
+    ['K_actual', c.kActual, '-'],
+    ['Q_actual', c.qUse, '-'],
+    ['Im_peak', c.imPk, 'A'],
+    ['Im_rms_triangular', c.imRmsTri, 'A'],
+    ['Iload_primary_rms', c.iLoadPriRms, 'A'],
+    ['Iresonant_rms_est', c.iResRms, 'A'],
+    ['ELm', c.eLm * 1e6, 'uJ'],
+    ['ECsw_required', c.eCsw * 1e6, 'uJ'],
+    ['tdead_min', c.tDeadMin * 1e9, 'ns'],
+    ['dead_time_margin', c.deadTimeMargin, '-'],
+    ['zvs_energy_margin', c.zvsEnergyMargin, '-']
+  ];
+  return rows.map(r => r.map(csvEscape).join(',')).join('\n');
+}
+
+function makeGraphCsv(c) {
+  const xMin = num('plotFMin', 0);
+  const xMax = Math.max(xMin + 10, num('plotFMax', c.inputs.fSwMaxK));
+  const gainHeaders = c.powers.map(p => `Gain_${fmt(p, 0)}W_Q_${fmt(qForPower(c, p), 4)}`);
+  const voCases = [
+    { vin: c.inputs.vinMax, p: Math.min(...c.powers), name: `Vo_Vin${fmt(c.inputs.vinMax,0)}_P${fmt(Math.min(...c.powers),0)}` },
+    { vin: c.inputs.vinMax, p: c.inputs.pout, name: `Vo_Vin${fmt(c.inputs.vinMax,0)}_P${fmt(c.inputs.pout,0)}` },
+    { vin: c.inputs.vinNom, p: c.inputs.pout, name: `Vo_Vin${fmt(c.inputs.vinNom,0)}_P${fmt(c.inputs.pout,0)}` },
+    { vin: c.inputs.vinMin, p: c.inputs.pout, name: `Vo_Vin${fmt(c.inputs.vinMin,0)}_P${fmt(c.inputs.pout,0)}` },
+    { vin: c.inputs.vinMin, p: c.inputs.pmax, name: `Vo_Vin${fmt(c.inputs.vinMin,0)}_P${fmt(c.inputs.pmax,0)}` }
+  ];
+  const rows = [[
+    'frequency_kHz', 'f_over_frH', ...gainHeaders, ...voCases.map(s => s.name), 'Gain_req_lowVin_highVout', 'Gain_req_highVin_lowVout'
+  ].map(csvEscape).join(',')];
+  for (let i = 0; i <= 700; i++) {
+    const f = xMin + (xMax - xMin) * i / 700;
+    const gains = c.powers.map(p => gainFor(c, f, p));
+    const vos = voCases.map(s => voutFor(c, s.vin, f, s.p));
+    rows.push([
+      f.toFixed(6),
+      (f / c.frHActualK).toFixed(8),
+      ...gains.map(v => Number.isFinite(v) ? v.toFixed(8) : ''),
+      ...vos.map(v => Number.isFinite(v) ? v.toFixed(8) : ''),
+      c.gReqLow.toFixed(8),
+      c.gReqHigh.toFixed(8)
+    ].map(csvEscape).join(','));
+  }
+  return '\ufeff' + rows.join('\n');
 }
 
 function csvEscape(value) {
@@ -438,66 +550,32 @@ function downloadBlob(filename, content, type = 'text/csv;charset=utf-8;') {
   URL.revokeObjectURL(url);
 }
 
-function makeGraphCsv(c) {
-  const fMin = Math.max(1, num('fMin', 60));
-  const fMax = Math.max(fMin + 1, num('fMax', 300));
-  let series;
-  if (plotMode() === 'power') {
-    series = parsePowerSeries(c.inputs.pout).map(p => ({
-      header: `Gp_Pout_${fmt(p, 4)}W_Q_${fmt(qAtPower(c, p), 4)}`,
-      q: qAtPower(c, p)
-    })).filter(s => Number.isFinite(s.q) && s.q > 0);
-  } else {
-    const sweepQs = parseQSeries(c.qActual);
-    series = [
-      { header: `Gp_Q_actual_${fmt(c.qActual, 4)}`, q: c.qActual },
-      ...sweepQs.map(q => ({ header: `Gp_Q_${fmt(q, 4)}`, q }))
-    ];
-  }
-  const headers = ['frequency_kHz', 'f_over_fr', ...series.map(s => s.header), 'Mreq_low_bus'];
-  const rows = [headers.map(csvEscape).join(',')];
-  for (let i = 0; i <= 520; i++) {
-    const f = fMin + (fMax - fMin) * i / 520;
-    const x = (f * 1000) / c.frActual;
-    const gains = series.map(s => llcGain(x, s.q, c.kActual));
-    rows.push([
-      f.toFixed(6),
-      x.toFixed(8),
-      ...gains.map(g => Number.isFinite(g) ? g.toFixed(8) : ''),
-      c.mReqMinBus.toFixed(8)
-    ].map(csvEscape).join(','));
-  }
-  return '\ufeff' + rows.join('\n');
+function downloadCsv() {
+  const c = calculate();
+  downloadBlob(`llc_design_${new Date().toISOString().slice(0,10)}.csv`, '\ufeff' + resultText(c));
 }
 
 function downloadGraphCsv() {
   const c = calculate();
-  const csv = makeGraphCsv(c);
-  downloadBlob(`llc_gain_graph_${new Date().toISOString().slice(0,10)}.csv`, csv);
+  downloadBlob(`llc_graph_${new Date().toISOString().slice(0,10)}.csv`, makeGraphCsv(c));
 }
-
-function downloadCsv() {
-  const c = calculate();
-  const csv = '\ufeff' + resultText(c);
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `llc_design_${new Date().toISOString().slice(0,10)}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
 
 function downloadChartPng() {
   update();
-  const canvas = $('gainChart');
-  const url = canvas.toDataURL('image/png');
+  const gain = $('gainChart');
+  const vo = $('voChart');
+  const merged = document.createElement('canvas');
+  merged.width = Math.max(gain.width, vo.width);
+  merged.height = gain.height + vo.height + 40;
+  const ctx = merged.getContext('2d');
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, merged.width, merged.height);
+  ctx.drawImage(gain, 0, 0);
+  ctx.drawImage(vo, 0, gain.height + 40);
+  const url = merged.toDataURL('image/png');
   const a = document.createElement('a');
   a.href = url;
-  a.download = `llc_gain_chart_${new Date().toISOString().slice(0,10)}.png`;
+  a.download = `llc_charts_${new Date().toISOString().slice(0,10)}.png`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -514,13 +592,17 @@ function update() {
   const c = calculate();
   renderSummary(c);
   renderSteps(c);
-  drawChart(c);
+  drawGainChart(c);
+  drawVoChart(c);
 }
 
-ids.forEach(id => $(id).addEventListener('input', update));
-$('recalcBtn').addEventListener('click', update);
-$('csvBtn').addEventListener('click', downloadCsv);
-$('graphCsvBtn').addEventListener('click', downloadGraphCsv);
-$('pngBtn').addEventListener('click', downloadChartPng);
-$('copyBtn').addEventListener('click', copyResult);
+inputIds.forEach(id => {
+  const el = $(id);
+  if (el) el.addEventListener('input', update);
+});
+$('recalcBtn')?.addEventListener('click', update);
+$('csvBtn')?.addEventListener('click', downloadCsv);
+$('graphCsvBtn')?.addEventListener('click', downloadGraphCsv);
+$('pngBtn')?.addEventListener('click', downloadChartPng);
+$('copyBtn')?.addEventListener('click', copyResult);
 update();

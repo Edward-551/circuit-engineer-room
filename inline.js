@@ -1,4 +1,3 @@
-
     const MU0 = 4 * Math.PI * 1e-7;
     let latestCsvRows = [];
 
@@ -60,14 +59,45 @@
       rows.push({ category, item, result });
     }
 
+    function getSecondaryRectifierInfo(mode){
+      if(mode === "center_tap"){
+        return {
+          label: "センタータップ（各巻線交互導通）",
+          rmsFactor: 1 / Math.sqrt(2),
+          windingCount: 2,
+          note: "各二次巻線は半周期導通の目安。Nsは片側巻線として扱います。"
+        };
+      }
+      if(mode === "current_doubler"){
+        return {
+          label: "電流ダブラ（概算）",
+          rmsFactor: 0.5,
+          windingCount: 1,
+          note: "概算です。実際は共振電流波形・出力インダクタ電流リップルで変わります。"
+        };
+      }
+      return {
+        label: "ブリッジ/全波（単一二次巻線）",
+        rmsFactor: 1,
+        windingCount: 1,
+        note: "単一二次巻線に出力電流相当が流れる目安です。"
+      };
+    }
+
     function addInputRows(csvRows){
       const inputs = [
+        ["入力", "設計モード", document.getElementById("design_mode").value],
+        ["入力", "磁束利用方式", document.getElementById("flux_mode").value],
         ["入力", "入力電圧 Vin [V]", getInputText("vin")],
         ["入力", "出力電圧 Vo [V]", getInputText("vo")],
         ["入力", "出力電力 Po [W]", getInputText("po")],
+        ["入力", "二次側整流方式", document.getElementById("secondary_rectifier").value],
+        ["入力", "導線計算用電流", document.getElementById("current_mode") ? document.getElementById("current_mode").value : "auto"],
+        ["入力", "任意 一次巻線RMS電流 [A]", getInputText("pri_current_manual")],
+        ["入力", "任意 二次巻線RMS電流 [A]", getInputText("sec_current_manual")],
         ["入力", "効率 η [%]", getInputText("eff")],
         ["入力", "スイッチング周波数 fs [kHz]", getInputText("fs")],
-        ["入力", "最大磁束密度 Bmax [T]", getInputText("bmax")],
+        ["入力", "許容 使用ΔB [T]", getInputText("bmax")],
         ["入力", "コア断面積 Ae [mm²]", getInputText("ae")],
         ["入力", "巻数比 Np/Ns", getInputText("ratio")],
         ["入力", "一次巻数 Np（0で自動）", getInputText("np_manual")],
@@ -93,12 +123,23 @@
     }
 
     function calcTransformer(){
+      const designMode = document.getElementById("design_mode").value;
+      const fluxMode = document.getElementById("flux_mode").value;
+      const isBipolarFlux = fluxMode === "bipolar";
+      const fluxModeLabel = isBipolarFlux ? "±B使用（HB/FB/Push-pull/LLC）" : "片側使用（Single-ended）";
       const vin = getNumber("vin");
       const vo = getNumber("vo");
       const po = getNumber("po");
+      const secondaryRectifier = document.getElementById("secondary_rectifier").value;
+      const rectifierInfo = getSecondaryRectifierInfo(secondaryRectifier);
+      const currentMode = document.getElementById("current_mode") ? document.getElementById("current_mode").value : "auto";
+      const useManualCurrent = currentMode === "manual";
+      const priCurrentManual = getOptionalNumber("pri_current_manual", 0);
+      const secCurrentManual = getOptionalNumber("sec_current_manual", 0);
       const eff = getNumber("eff") / 100;
       const fs = getNumber("fs") * 1000;
-      const bmax = getNumber("bmax");
+      const usedDeltaBLimit = getNumber("bmax");
+      const bpkLimit = isBipolarFlux ? usedDeltaBLimit / 2 : usedDeltaBLimit;
       const ae_mm2 = getNumber("ae");
       const ratio = getNumber("ratio");
       const np_manual = getNumber("np_manual");
@@ -122,8 +163,8 @@
       const resultMessage = document.getElementById("resultMessage");
       const resultTable = document.getElementById("resultTable");
 
-      const values = [vin, vo, po, eff, fs, bmax, ae_mm2, ratio, np_manual, j, aw, ku, priWireDiaInput, priParallelInput, secWireDiaInput, secParallelInput, indL_uH, indN, indIpk, bsat, le_mm, alNoGap_nH, gapG_mm];
-      if(values.some(v => !Number.isFinite(v)) || vin <= 0 || vo <= 0 || po <= 0 || eff <= 0 || fs <= 0 || bmax <= 0 || ae_mm2 <= 0 || ratio <= 0 || j <= 0 || aw <= 0 || ku <= 0 || np_manual < 0 || priWireDiaInput < 0 || priParallelInput < 0 || secWireDiaInput < 0 || secParallelInput < 0 || indL_uH < 0 || indN < 0 || indIpk < 0 || bsat <= 0 || le_mm < 0 || alNoGap_nH < 0 || gapG_mm < 0){
+      const values = [vin, vo, po, priCurrentManual, secCurrentManual, eff, fs, usedDeltaBLimit, bpkLimit, ae_mm2, ratio, np_manual, j, aw, ku, priWireDiaInput, priParallelInput, secWireDiaInput, secParallelInput, indL_uH, indN, indIpk, bsat, le_mm, alNoGap_nH, gapG_mm];
+      if(values.some(v => !Number.isFinite(v)) || vin <= 0 || vo <= 0 || po <= 0 || priCurrentManual < 0 || secCurrentManual < 0 || (useManualCurrent && (priCurrentManual <= 0 || secCurrentManual <= 0)) || eff <= 0 || fs <= 0 || usedDeltaBLimit <= 0 || bpkLimit <= 0 || ae_mm2 <= 0 || ratio <= 0 || j <= 0 || aw <= 0 || ku <= 0 || np_manual < 0 || priWireDiaInput < 0 || priParallelInput < 0 || secWireDiaInput < 0 || secParallelInput < 0 || indL_uH < 0 || indN < 0 || indIpk < 0 || bsat <= 0 || le_mm < 0 || alNoGap_nH < 0 || gapG_mm < 0){
         resultMessage.innerHTML = "⚠ 入力値を確認してください。0未満、空欄、または主要条件が0以下だと計算できません。";
         resultTable.innerHTML = "";
         latestCsvRows = [];
@@ -132,10 +173,15 @@
 
       const ae = ae_mm2 * 1e-6;
       const pin = po / eff;
-      const iin = pin / vin;
+      const iinAuto = pin / vin;
       const io = po / vo;
+      const secWindingRmsAuto = io * rectifierInfo.rmsFactor;
+      const iin = useManualCurrent ? priCurrentManual : iinAuto;
+      const secWindingRms = useManualCurrent ? secCurrentManual : secWindingRmsAuto;
+      const secWindingCount = rectifierInfo.windingCount;
+      const currentModeLabel = useManualCurrent ? "任意電流を使用" : "Po/Voから自動計算";
 
-      const np_min = vin / (4 * fs * bmax * ae);
+      const np_min = vin / (2 * fs * usedDeltaBLimit * ae);
       const np = np_manual > 0 ? np_manual : Math.ceil(np_min);
       const npForGap = indN > 0 ? Math.ceil(indN) : np;
       const npForGapNote = indN > 0 ? "入力されたNp_gapを使用" : "Np_gap=0のため、上の一次巻数Npを自動使用";
@@ -143,10 +189,13 @@
       const ns = Math.ceil(nsIdeal);
       const actualRatio = np / ns;
       const voRatioOnly = vin / actualRatio;
-      const deltaB = vin / (4 * fs * np * ae);
+      const usedDeltaBActual = vin / (2 * fs * np * ae);
+      const bpkActual = isBipolarFlux ? usedDeltaBActual / 2 : usedDeltaBActual;
+      const deltaBppActual = isBipolarFlux ? usedDeltaBActual : NaN;
+      const deltaBppLimit = isBipolarFlux ? usedDeltaBLimit : NaN;
 
       const priAreaRequired = iin / j;
-      const secAreaRequired = io / j;
+      const secAreaRequired = secWindingRms / j;
       const priDiaEquivalent = Math.sqrt((4 * priAreaRequired) / Math.PI);
       const secDiaEquivalent = Math.sqrt((4 * secAreaRequired) / Math.PI);
 
@@ -161,25 +210,28 @@
       const priActualArea = wireArea(priWireDia) * priParallel;
       const secActualArea = wireArea(secWireDia) * secParallel;
       const priActualJ = iin / priActualArea;
-      const secActualJ = io / secActualArea;
+      const secActualJ = secWindingRms / secActualArea;
 
-      const copperAreaRequired = (priAreaRequired * np) + (secAreaRequired * ns);
-      const copperAreaActual = (priActualArea * np) + (secActualArea * ns);
+      const copperAreaRequired = (priAreaRequired * np) + (secAreaRequired * ns * secWindingCount);
+      const copperAreaActual = (priActualArea * np) + (secActualArea * ns * secWindingCount);
       const usableWindow = aw * ku;
       const windowUsageRequired = (copperAreaRequired / usableWindow) * 100;
       const windowUsageActual = (copperAreaActual / usableWindow) * 100;
 
       const messages = [];
+      if(useManualCurrent){
+        messages.push("ℹ 導線計算：任意入力した一次/二次巻線RMS電流を使用中");
+      }
       if(ns !== nsIdeal){
         messages.push(`✓ 二次巻数：理論値 ${nsIdeal.toFixed(2)} turn → ${ns} turn に切り上げ`);
       }
 
-      if(deltaB > bmax){
-        messages.push("⚠ トランス：磁気飽和の可能性あり");
-      }else if(deltaB > bmax * 0.9){
-        messages.push("▲ トランス：磁束密度高め");
+      if(bpkActual > bpkLimit){
+        messages.push("⚠ トランス：Bpkが許容値を超えています");
+      }else if(bpkActual > bpkLimit * 0.9){
+        messages.push("▲ トランス：Bpkが高め");
       }else{
-        messages.push("✓ トランス：磁束密度 OK");
+        messages.push("✓ トランス：Bpk OK");
       }
 
       if(priActualJ > j || secActualJ > j){
@@ -205,9 +257,20 @@
       addRow(rows, "巻数", "二次巻数 Ns 採用値", `${fmt(ns, 0, "turn")}（切り上げ）`);
       addRow(rows, "巻数", "実際の巻数比 Np/Ns", fmt(actualRatio, 2, ""));
       addRow(rows, "巻数", "巻数比だけで見た二次電圧目安", fmt(voRatioOnly, 2, "V"));
-      addRow(rows, "磁束", "実際の ΔB", fmt(deltaB, 3, "T"));
-      addRow(rows, "電流", "一次側電流", fmt(iin, 2, "A"));
-      addRow(rows, "電流", "二次側電流", fmt(io, 2, "A"));
+      addRow(rows, "磁束", "磁束利用方式", fluxModeLabel);
+      addRow(rows, "磁束", "許容 使用ΔB", fmt(usedDeltaBLimit, 3, "T"));
+      addRow(rows, "磁束", "許容 Bpk", fmt(bpkLimit, 3, "T"));
+      addRow(rows, "磁束", "実際の 使用ΔB", fmt(usedDeltaBActual, 3, "T"));
+      addRow(rows, "磁束", "実際の Bpk", fmt(bpkActual, 3, "T"));
+      addRow(rows, "磁束", "実際の ΔBpp", isBipolarFlux ? fmt(deltaBppActual, 3, "T") : "—（片側使用）");
+      addRow(rows, "電流", "導線計算用電流モード", currentModeLabel);
+      addRow(rows, "電流", "一次側入力電流 自動計算値", fmt(iinAuto, 2, "A"));
+      addRow(rows, "電流", "一次巻線RMS電流 採用値", fmt(iin, 2, "A"));
+      addRow(rows, "電流", "二次側 出力DC電流 Io", fmt(io, 2, "A"));
+      addRow(rows, "電流", "二次側整流方式", rectifierInfo.label);
+      addRow(rows, "電流", "二次巻線RMS電流 自動目安", fmt(secWindingRmsAuto, 2, "A"));
+      addRow(rows, "電流", "二次巻線RMS電流 採用値", fmt(secWindingRms, 2, "A"));
+      addRow(rows, "電流", "二次巻線本数係数", `${secWindingCount}（${rectifierInfo.note}）`);
       addRow(rows, "導線", "一次側 必要導体断面積", fmt(priAreaRequired, 2, "mm²"));
       addRow(rows, "導線", "二次側 必要導体断面積", fmt(secAreaRequired, 2, "mm²"));
       addRow(rows, "導線", "一次側 単線換算径", fmt(priDiaEquivalent, 2, "mm"));
@@ -233,7 +296,7 @@
       };
 
       if(gapMode === "target_l"){
-        indRows.mode = "目標Lから必要gを計算";
+        indRows.mode = "目標Lm/Lから必要gを計算";
         if(indL_uH > 0 && npForGap > 0){
           const indL = indL_uH * 1e-6;
           const gap_m_simple = MU0 * npForGap * npForGap * ae / indL;
@@ -265,7 +328,7 @@
           }
 
           indRows = {
-            mode: "目標Lから必要gを計算",
+            mode: "目標Lm/Lから必要gを計算",
             indL: fmt(indL_uH, 2, "µH"),
             indN: `${fmt(npForGap, 0, "turn")}（${npForGapNote}）`,
             indIpk: hasIndIpk ? fmt(indIpk, 2, "A") : "—（未入力）",
@@ -282,10 +345,10 @@
             note: alNoGap_nH > 0 ? `無ギャップAL補正込みgも併記 / ${npForGapNote}` : `コア透磁率を無限大とした簡易g / ${npForGapNote}`
           };
         }else{
-          messages.push("▲ 目標Lモード：Ltargetを入力すると必要ギャップgを計算します。Ipk未入力時はIpk関連のみ未計算です。Np_gapは0なら一次巻数Npを自動使用します");
+          messages.push("▲ 目標Lm/Lモード：Ltargetを入力すると必要ギャップgを計算します。Ipk未入力時はIpk関連のみ未計算です。Np_gapは0なら一次巻数Npを自動使用します");
         }
       }else if(gapMode === "given_g"){
-        indRows.mode = "ギャップ長gからLを計算";
+        indRows.mode = "ギャップ長gからLm/Lを計算";
         if(gapG_mm > 0 && npForGap > 0){
           const gap_m = gapG_mm * 1e-3;
           const alSimple_H = MU0 * ae / gap_m;
@@ -320,7 +383,7 @@
           }
 
           indRows = {
-            mode: "ギャップ長gからLを計算",
+            mode: "ギャップ長gからLm/Lを計算",
             indL: fmt(indL_calc_uH, 2, "µH"),
             indN: `${fmt(npForGap, 0, "turn")}（${npForGapNote}）`,
             indIpk: hasIndIpk ? fmt(indIpk, 2, "A") : "—（未入力）",
@@ -337,7 +400,7 @@
             note: `${note} / ${npForGapNote}`
           };
         }else{
-          messages.push("▲ g指定モード：gを入力すると、そのギャップでのLを計算します。Ipk未入力時はIpk関連のみ未計算です。Np_gapは0なら一次巻数Npを自動使用します");
+          messages.push("▲ g指定モード：gを入力すると、そのギャップでのLm/Lを計算します。Ipk未入力時はIpk関連のみ未計算です。Np_gapは0なら一次巻数Npを自動使用します");
         }
       }else{
         messages.push("ℹ ギャップなし：通常トランス想定です。AL値を入れるとLm目安のみ表示します");
@@ -345,7 +408,7 @@
 
       addRow(rows, "ギャップ", "計算モード", indRows.mode);
       addRow(rows, "ギャップ", "計算メモ", indRows.note);
-      addRow(rows, "ギャップ/インダクタ", "目標/計算インダクタンス L", indRows.indL);
+      addRow(rows, "ギャップ/インダクタ", designMode === "llc" ? "目標/計算 励磁インダクタンス Lm" : "目標/計算インダクタンス L", indRows.indL);
       addRow(rows, "ギャップ/インダクタ", "Lm計算に使用した巻数 N", indRows.indN);
       addRow(rows, "ギャップ/インダクタ", "ピーク電流 Ipk", indRows.indIpk);
       addRow(rows, "ギャップ/インダクタ", "Bpk = L×Ipk/(N×Ae)", indRows.bInd);
@@ -358,6 +421,20 @@
       addRow(rows, "ギャップ", "中央脚片側ギャップ目安", indRows.gapHalf);
       addRow(rows, "インダクタ", "H目安 = N×Ipk/le", indRows.hApprox);
       addRow(rows, "ギャップ", "無ギャップAL補正込み lgap", indRows.gapFromAl);
+
+      if(designMode === "llc"){
+        if(gapMode === "none"){
+          messages.push("ℹ LLCモード：Lmを狙う場合は、ギャップ計算モードを『目標Lm/Lから必要g』または『gからLm/L』にします");
+        }
+        addRow(rows, "LLCまとめ", "一次巻数 Np", fmt(np, 0, "turn"));
+        addRow(rows, "LLCまとめ", "二次巻数 Ns 採用値", `${fmt(ns, 0, "turn")}（切り上げ）`);
+        addRow(rows, "LLCまとめ", "実際の巻数比 Np/Ns", fmt(actualRatio, 2, ""));
+        addRow(rows, "LLCまとめ", "目標/計算Lm", indRows.indL);
+        addRow(rows, "LLCまとめ", "必要/指定ギャップ g", indRows.gap);
+        addRow(rows, "LLCまとめ", "ギャップ後AL", indRows.alGapped);
+        addRow(rows, "LLCまとめ", "Bpk", indRows.bInd);
+        addRow(rows, "LLCまとめ", "Isat目安", indRows.iSat);
+      }
 
       resultMessage.innerHTML = messages.join("<br>");
       resultTable.innerHTML = `
@@ -411,4 +488,3 @@
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     }
-  

@@ -180,7 +180,7 @@ button:hover { filter: brightness(.95); }
   white-space: normal;
 }
 .chart-wrap {
-  border: 1px solid var(--line);
+  border: 1px solid #0f172a;
   border-radius: 14px;
   padding: 10px;
   background: #fff;
@@ -220,4 +220,11 @@ canvas { max-width: 100%; height: auto; }
 .legend-note {
   color: #475569;
   font-size: 0.9rem;
+}
+.chart-heading {
+  margin-top: 26px;
+}
+.legend .line {
+  margin-left: 4px;
+  margin-right: -8px;
 }
