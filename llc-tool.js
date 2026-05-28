@@ -2,7 +2,7 @@
 
 const $ = (id) => document.getElementById(id);
 const inputIds = [
-  'vinMin','vinNom','vinMax','voutMin','voutNom','voutMax','pout','pmax','eff','vf','nsTurns','turnRoundMode','nManual',
+  'vinMin','vinNom','vinMax','voutMin','voutNom','voutMax','pout','pmax','eff','vf','windingMode','alValue','nsTurns','npManual','nManual',
   'fSwMax','fSwMin','frRatio','frH','plotFMin','plotFMax','qMin','qMax','qStep','qManual','powerList','gainYMax',
   'lrActual','crActual','lmActual','fChk','cSw','deadTime'
 ];
@@ -105,12 +105,14 @@ function calculate() {
   const pmax = num('pmax', 560);
   const eff = num('eff', 95) / 100;
   const vf = num('vf', 0.40);
-  const nsTurns = Math.max(1, Math.round(num('nsTurns', 5)));
-  const turnRoundMode = $('turnRoundMode')?.value || 'round';
+  const windingMode = $('windingMode')?.value || 'autoAl';
+  const alValue = Math.max(0.001, num('alValue', 250)); // nH/turn^2
+  const nsInput = Math.max(1, Math.round(num('nsTurns', 5)));
+  const npManualInput = maybeNum('npManual');
   const nManual = maybeNum('nManual');
 
   const fSwMaxK = num('fSwMax', 300);
-  const fSwMinK = num('fSwMin', 115);
+  const fSwMinK = num('fSwMin', 130);
   const ratio = Math.max(1.01, num('frRatio', 2.3));
   const frHDesignK = num('frH', 230);
   const frHDesign = frHDesignK * 1000;
@@ -119,51 +121,115 @@ function calculate() {
 
   // Vinmax / Voutmin basis. This prevents excessive output voltage at high bus and low output setting.
   const nCalc = vinMax / (2 * (voutMin + vf));
-  const npCalc = nCalc * nsTurns;
-  let npUse = npCalc;
-  if (turnRoundMode === 'ceil') npUse = Math.max(1, Math.ceil(npCalc));
-  if (turnRoundMode === 'floor') npUse = Math.max(1, Math.floor(npCalc));
-  if (turnRoundMode === 'round') npUse = Math.max(1, Math.round(npCalc));
-  let n = turnRoundMode === 'none' ? nCalc : npUse / nsTurns;
-  if (turnRoundMode === 'manual' && Number.isFinite(nManual) && nManual > 0) {
-    n = nManual;
-    npUse = n * nsTurns;
-  }
-
+  const nTarget = (windingMode === 'manualN' && Number.isFinite(nManual) && nManual > 0) ? nManual : nCalc;
   const ioutNom = pout / voutNom;
   const ioutMax = pmax / voutMin;
   const pin = pout / eff;
   const routNom = (voutNom * voutNom) / pout;
   const routMaxLoad = (voutMax * voutMax) / pout;
   const racSec = 8 * routNom / (Math.PI * Math.PI);
-  const racPri = n * n * racSec;
-
-  const gReqLow = 2 * n * (voutMax + vf) / vinMin;
-  const gReqNom = 2 * n * (voutNom + vf) / vinNom;
-  const gReqHigh = 2 * n * (voutMin + vf) / vinMax;
-  const gReqMax = Math.max(gReqLow, gReqNom, gReqHigh);
-  const gReqMin = Math.min(gReqLow, gReqNom, gReqHigh);
 
   const qMin = Math.max(0.01, num('qMin', 0.15));
   const qMax = Math.max(qMin, num('qMax', 1.2));
   const qStep = Math.max(0.001, num('qStep', 0.01));
-  const candidates = [];
-  for (let q = qMin; q <= qMax + qStep / 2; q += qStep) {
-    const qFixed = Number(q.toFixed(5));
-    const peak = maxGainInRange(kDesign, qFixed, frHDesign, fSwMinK, frHDesignK);
-    const gainAtFmin = llcGain((fSwMinK * 1000) / frHDesign, qFixed, kDesign);
-    candidates.push({ q: qFixed, peakGain: peak.max, peakFreqK: peak.fAt, gainAtFmin, ok: peak.max >= gReqMax });
-  }
-  const okCandidates = candidates.filter(c => c.ok);
-  const qRecommended = okCandidates.length ? okCandidates[okCandidates.length - 1].q : qMin;
   const qManual = maybeNum('qManual');
-  const qDesign = Number.isFinite(qManual) && qManual > 0 ? qManual : qRecommended;
-  const qSelectedInfo = candidates.reduce((best, cur) => Math.abs(cur.q - qDesign) < Math.abs(best.q - qDesign) ? cur : best, candidates[0] || { q: qDesign, peakGain: NaN, peakFreqK: NaN, gainAtFmin: NaN, ok: false });
 
-  const z0Design = qDesign * racPri;
-  const lrDesign = z0Design / (2 * Math.PI * frHDesign);
-  const crDesign = 1 / (Math.pow(2 * Math.PI * frHDesign, 2) * lrDesign);
-  const lmDesign = kDesign * lrDesign;
+  function designForN(nValue) {
+    const racPriValue = nValue * nValue * racSec;
+    const gReqLowValue = 2 * nValue * (voutMax + vf) / vinMin;
+    const gReqNomValue = 2 * nValue * (voutNom + vf) / vinNom;
+    const gReqHighValue = 2 * nValue * (voutMin + vf) / vinMax;
+    const gReqMaxValue = Math.max(gReqLowValue, gReqNomValue, gReqHighValue);
+    const gReqMinValue = Math.min(gReqLowValue, gReqNomValue, gReqHighValue);
+
+    const candidatesValue = [];
+    for (let q = qMin; q <= qMax + qStep / 2; q += qStep) {
+      const qFixed = Number(q.toFixed(5));
+      const peak = maxGainInRange(kDesign, qFixed, frHDesign, fSwMinK, frHDesignK);
+      const gainAtFmin = llcGain((fSwMinK * 1000) / frHDesign, qFixed, kDesign);
+      candidatesValue.push({ q: qFixed, peakGain: peak.max, peakFreqK: peak.fAt, gainAtFmin, ok: peak.max >= gReqMaxValue });
+    }
+    const okCandidatesValue = candidatesValue.filter(c => c.ok);
+    const qRecommendedValue = okCandidatesValue.length ? okCandidatesValue[okCandidatesValue.length - 1].q : qMin;
+    const qDesignValue = Number.isFinite(qManual) && qManual > 0 ? qManual : qRecommendedValue;
+    const qSelectedInfoValue = candidatesValue.reduce((best, cur) => Math.abs(cur.q - qDesignValue) < Math.abs(best.q - qDesignValue) ? cur : best, candidatesValue[0] || { q: qDesignValue, peakGain: NaN, peakFreqK: NaN, gainAtFmin: NaN, ok: false });
+
+    const z0DesignValue = qDesignValue * racPriValue;
+    const lrDesignValue = z0DesignValue / (2 * Math.PI * frHDesign);
+    const crDesignValue = 1 / (Math.pow(2 * Math.PI * frHDesign, 2) * lrDesignValue);
+    const lmDesignValue = kDesign * lrDesignValue;
+
+    return {
+      racPri: racPriValue,
+      gReqLow: gReqLowValue,
+      gReqNom: gReqNomValue,
+      gReqHigh: gReqHighValue,
+      gReqMax: gReqMaxValue,
+      gReqMin: gReqMinValue,
+      candidates: candidatesValue,
+      okCandidates: okCandidatesValue,
+      qRecommended: qRecommendedValue,
+      qDesign: qDesignValue,
+      qSelectedInfo: qSelectedInfoValue,
+      z0Design: z0DesignValue,
+      lrDesign: lrDesignValue,
+      crDesign: crDesignValue,
+      lmDesign: lmDesignValue
+    };
+  }
+
+  let n = nTarget;
+  let npUse = NaN;
+  let nsTurns = nsInput;
+  let npCalc = nTarget * nsInput;
+  let npFromAlRaw = NaN;
+  let windingNote = '';
+
+  if (windingMode === 'autoAl') {
+    // Iterate lightly because Lm changes when the final integer Np/Ns changes the actual n.
+    for (let i = 0; i < 3; i++) {
+      const d = designForN(n);
+      npFromAlRaw = Math.sqrt((d.lmDesign * 1e9) / alValue);
+      npUse = Math.max(1, Math.ceil(npFromAlRaw));
+      nsTurns = Math.max(1, Math.round(npUse / nTarget));
+      n = npUse / nsTurns;
+    }
+    windingNote = `AL=${fmt(alValue, 1)}nH/T²からNpを算出。Npは切り上げ、Nsは目標nに近い整数。`;
+  } else if (windingMode === 'manualTurns') {
+    npUse = Math.max(1, Math.round(Number.isFinite(npManualInput) ? npManualInput : nTarget * nsInput));
+    nsTurns = nsInput;
+    n = npUse / nsTurns;
+    windingNote = '一次/二次巻数を任意指定。nはNp/Nsから算出。';
+  } else if (windingMode === 'manualNs') {
+    nsTurns = nsInput;
+    npCalc = nTarget * nsTurns;
+    npUse = Math.max(1, Math.round(npCalc));
+    n = npUse / nsTurns;
+    windingNote = '二次巻数を任意指定。Npは目標n×Nsを四捨五入。';
+  } else {
+    nsTurns = nsInput;
+    npCalc = nTarget * nsTurns;
+    npUse = Math.max(1, Math.round(npCalc));
+    n = npUse / nsTurns;
+    windingNote = '巻数比を手入力。実巻数比は整数Np/Nsから算出。';
+  }
+
+  const d = designForN(n);
+  const racPri = d.racPri;
+  const gReqLow = d.gReqLow;
+  const gReqNom = d.gReqNom;
+  const gReqHigh = d.gReqHigh;
+  const gReqMax = d.gReqMax;
+  const gReqMin = d.gReqMin;
+  const candidates = d.candidates;
+  const okCandidates = d.okCandidates;
+  const qRecommended = d.qRecommended;
+  const qDesign = d.qDesign;
+  const qSelectedInfo = d.qSelectedInfo;
+  const z0Design = d.z0Design;
+  const lrDesign = d.lrDesign;
+  const crDesign = d.crDesign;
+  const lmDesign = d.lmDesign;
 
   const lrActualInput = maybeNum('lrActual');
   const crActualInput = maybeNum('crActual');
@@ -199,8 +265,9 @@ function calculate() {
   const powers = parsePowerSeries(pout, pmax);
 
   return {
-    inputs: { vinMin, vinNom, vinMax, voutMin, voutNom, voutMax, pout, pmax, eff, vf, nsTurns, turnRoundMode, nManual, fSwMaxK, fSwMinK, ratio, frHDesignK, qMin, qMax, qStep, qManual, fChkK, cSwPf: cSw * 1e12, deadTimeNs: deadTime * 1e9 },
-    nCalc, npCalc, npUse, n, ioutNom, ioutMax, pin, routNom, routMaxLoad, racSec, racPri,
+    inputs: { vinMin, vinNom, vinMax, voutMin, voutNom, voutMax, pout, pmax, eff, vf, windingMode, alValue, nsTurns, npManual: Number.isFinite(npManualInput) ? npManualInput : null, nManual, fSwMaxK, fSwMinK, ratio, frHDesignK, qMin, qMax, qStep, qManual, fChkK, cSwPf: cSw * 1e12, deadTimeNs: deadTime * 1e9 },
+    nCalc, nTarget, npCalc, npFromAlRaw, npUse, nsTurns, n, windingNote,
+    ioutNom, ioutMax, pin, routNom, routMaxLoad, racSec, racPri,
     frLDesignK, kDesign, gReqLow, gReqNom, gReqHigh, gReqMax, gReqMin,
     candidates, okCandidates, qRecommended, qDesign, qSelectedInfo,
     z0Design, lrDesign, crDesign, lmDesign,
@@ -211,8 +278,9 @@ function calculate() {
 
 function renderSummary(c) {
   const cards = [
-    ['使用巻数比 n', `${fmt(c.n, 3)} : 1`],
-    ['一次巻数 Np', `${fmt(c.npUse, 2)} turn`],
+    ['実巻数比 n', `${fmt(c.n, 3)} : 1`],
+    ['一次巻数 Np', `${Math.round(c.npUse)} turn`],
+    ['二次巻数 Ns', `${Math.round(c.nsTurns)} turn`],
     ['frH / frL', `${fmt(c.frHActualK, 2)} / ${fmt(c.frLActualK, 2)} kHz`],
     ['K = Lm/Lr', `${fmt(c.kActual, 3)}`],
     ['必要最大ゲイン', `${fmt(c.gReqMax, 3)}`],
@@ -240,10 +308,10 @@ function qJudgement(c) {
   return `必要最大ゲインを満たすQ候補：${fmt(qMinOk, 3)}〜${fmt(qMaxOk, 3)}。推奨は電流を抑えやすい上限側 ${fmt(c.qRecommended, 3)}。`;
 }
 
-function renderSteps(c) {
-  const rows = [
+function getStepRows(c) {
+  return [
     ['STEP1 仕様入力', `Vin=${fmt(c.inputs.vinMin, 1)}/${fmt(c.inputs.vinNom, 1)}/${fmt(c.inputs.vinMax, 1)}V、Vout=${fmt(c.inputs.voutMin, 2)}/${fmt(c.inputs.voutNom, 2)}/${fmt(c.inputs.voutMax, 2)}V、Pout=${fmt(c.inputs.pout, 1)}W、Pmax=${fmt(c.inputs.pmax, 1)}W`],
-    ['STEP2 巻数比', `Vinmax・Voutmin基準。n_calc=${fmt(c.nCalc, 4)}、Np_calc=${fmt(c.npCalc, 3)}turn、Np_use=${fmt(c.npUse, 3)}turn、n_use=${fmt(c.n, 4)}`],
+    ['STEP2 巻線決定', `${c.windingNote} 目標n=${fmt(c.nTarget, 4)}、Np=${Math.round(c.npUse)}turn、Ns=${Math.round(c.nsTurns)}turn、実n=${fmt(c.n, 4)}${Number.isFinite(c.npFromAlRaw) ? `、Np(AL計算値)=${fmt(c.npFromAlRaw, 3)}turn` : ''}`],
     ['STEP3 周波数条件', `fmin=${fmt(c.inputs.fSwMinK, 1)}kHz、fmax=${fmt(c.inputs.fSwMaxK, 1)}kHz、frH=${fmt(c.inputs.frHDesignK, 1)}kHz、frL=${fmt(c.frLDesignK, 1)}kHz、K=${fmt(c.kDesign, 3)}`],
     ['STEP4 必要ゲイン', `Vinmin/Voutmax: ${fmt(c.gReqLow, 3)}、Vinnom/Voutnom: ${fmt(c.gReqNom, 3)}、Vinmax/Voutmin: ${fmt(c.gReqHigh, 3)}、必要最大=${fmt(c.gReqMax, 3)}`],
     ['STEP5 Q選定', `${qJudgement(c)} 使用Q=${fmt(c.qDesign, 3)}、選択Qのピーク=${fmt(c.qSelectedInfo.peakGain, 3)} @ ${fmt(c.qSelectedInfo.peakFreqK, 1)}kHz`],
@@ -253,6 +321,10 @@ function renderSteps(c) {
     ['STEP9 電流目安', `fchk=${fmt(c.inputs.fChkK, 1)}kHz、Im_pk=${fmt(c.imPk, 3)}A、Im_rms≈${fmt(c.imRmsTri, 3)}A、Iload_pri≈${fmt(c.iLoadPriRms, 3)}Arms、Ir≈${fmt(c.iResRms, 3)}Arms`],
     ['STEP10 ZVS目安', `ELm=${fmt(c.eLm * 1e6, 3)}µJ、ECsw=${fmt(c.eCsw * 1e6, 3)}µJ、tdead_min≈${fmt(c.tDeadMin * 1e9, 3)}ns、設定/最小=${fmt(c.deadTimeMargin, 3)}倍`]
   ];
+}
+
+function renderSteps(c) {
+  const rows = getStepRows(c);
   $('stepResults').innerHTML = rows.map(([title, body]) => `
     <div class="result-row"><strong>${title}</strong><code>${body}</code></div>
   `).join('');
@@ -331,7 +403,7 @@ function drawVerticalLine(ctx, scale, f, label, color, xMin, xMax) {
   ctx.fillStyle = color;
   ctx.font = '13px system-ui';
   ctx.textAlign = 'left';
-  ctx.fillText(label, x + 5, pad.t + 16);
+  if (label) ctx.fillText(label, x + 5, pad.t + 16);
 }
 
 function drawHorizontalLine(ctx, scale, y, label, color, yMin, yMax) {
@@ -383,11 +455,11 @@ function drawGainChart(c) {
   drawVerticalLine(ctx, scale, c.inputs.fSwMinK, 'fmin', '#dc2626', xMin, xMax);
   drawVerticalLine(ctx, scale, c.frLActualK, 'frL', '#0f766e', xMin, xMax);
   drawVerticalLine(ctx, scale, c.frHActualK, 'frH', '#475569', xMin, xMax);
-  drawVerticalLine(ctx, scale, c.inputs.fSwMaxK, 'fmax', '#2563eb', xMin, xMax);
+  drawVerticalLine(ctx, scale, c.inputs.fSwMaxK, '', '#2563eb', xMin, xMax);
 
   drawPlotFrame(ctx, scale);
 
-  renderLegend('gainLegend', c.powers.map((p, i) => ({ color: palette[i % palette.length], text: `${fmt(p, 0)}W / Q=${fmt(qForPower(c, p), 3)}` })));
+  renderLegend('gainLegend', getGainLegendItems(c));
 }
 
 function drawVoChart(c) {
@@ -400,13 +472,7 @@ function drawVoChart(c) {
   const scale = chartScales(canvas, xMin, xMax, yMin, yMax);
   drawBase(ctx, scale, xMin, xMax, yMin, yMax, 'Vout [V]', 'fsw [kHz]');
 
-  const cases = [
-    { vin: c.inputs.vinMax, p: Math.min(...c.powers), label: `Vin=${fmt(c.inputs.vinMax, 0)}V P=${fmt(Math.min(...c.powers), 0)}W`, color: '#2563eb', width: 2 },
-    { vin: c.inputs.vinMax, p: c.inputs.pout, label: `Vin=${fmt(c.inputs.vinMax, 0)}V P=${fmt(c.inputs.pout, 0)}W`, color: '#0f766e', width: 2.5 },
-    { vin: c.inputs.vinNom, p: c.inputs.pout, label: `Vin=${fmt(c.inputs.vinNom, 0)}V P=${fmt(c.inputs.pout, 0)}W`, color: '#7c3aed', width: 2.5 },
-    { vin: c.inputs.vinMin, p: c.inputs.pout, label: `Vin=${fmt(c.inputs.vinMin, 0)}V P=${fmt(c.inputs.pout, 0)}W`, color: '#ea580c', width: 2.5 },
-    { vin: c.inputs.vinMin, p: c.inputs.pmax, label: `Vin=${fmt(c.inputs.vinMin, 0)}V P=${fmt(c.inputs.pmax, 0)}W`, color: '#dc2626', width: 3 }
-  ];
+  const cases = getVoCases(c);
 
   cases.forEach(s => {
     ctx.strokeStyle = s.color;
@@ -431,11 +497,40 @@ function drawVoChart(c) {
   drawVerticalLine(ctx, scale, c.inputs.fSwMinK, 'fmin', '#dc2626', xMin, xMax);
   drawVerticalLine(ctx, scale, c.frLActualK, 'frL', '#0f766e', xMin, xMax);
   drawVerticalLine(ctx, scale, c.frHActualK, 'frH', '#475569', xMin, xMax);
-  drawVerticalLine(ctx, scale, c.inputs.fSwMaxK, 'fmax', '#2563eb', xMin, xMax);
+  drawVerticalLine(ctx, scale, c.inputs.fSwMaxK, '', '#2563eb', xMin, xMax);
 
   drawPlotFrame(ctx, scale);
 
-  renderLegend('voLegend', cases.map(s => ({ color: s.color, text: s.label })));
+  renderLegend('voLegend', getVoLegendItems(c));
+}
+
+
+function getGainLegendItems(c) {
+  const items = c.powers.map((p, i) => ({
+    color: palette[i % palette.length],
+    text: `${fmt(p, 0)}W / Q=${fmt(qForPower(c, p), 3)}${Math.abs(p - c.inputs.pout) < 0.001 ? '（定格）' : ''}`
+  }));
+  items.push({ color: '#b45309', text: `必要Gain: Vinmin/Voutmax = ${fmt(c.gReqLow, 3)}` });
+  items.push({ color: '#64748b', text: `必要Gain: Vinmax/Voutmin = ${fmt(c.gReqHigh, 3)}` });
+  return items;
+}
+
+function getVoCases(c) {
+  return [
+    { vin: c.inputs.vinMax, p: Math.min(...c.powers), label: `Vin=${fmt(c.inputs.vinMax, 0)}V / P=${fmt(Math.min(...c.powers), 0)}W`, color: '#2563eb', width: 2 },
+    { vin: c.inputs.vinMax, p: c.inputs.pout, label: `Vin=${fmt(c.inputs.vinMax, 0)}V / P=${fmt(c.inputs.pout, 0)}W`, color: '#0f766e', width: 2.5 },
+    { vin: c.inputs.vinNom, p: c.inputs.pout, label: `Vin=${fmt(c.inputs.vinNom, 0)}V / P=${fmt(c.inputs.pout, 0)}W`, color: '#7c3aed', width: 2.5 },
+    { vin: c.inputs.vinMin, p: c.inputs.pout, label: `Vin=${fmt(c.inputs.vinMin, 0)}V / P=${fmt(c.inputs.pout, 0)}W`, color: '#ea580c', width: 2.5 },
+    { vin: c.inputs.vinMin, p: c.inputs.pmax, label: `Vin=${fmt(c.inputs.vinMin, 0)}V / P=${fmt(c.inputs.pmax, 0)}W`, color: '#dc2626', width: 3 }
+  ];
+}
+
+function getVoLegendItems(c) {
+  const items = getVoCases(c).map(s => ({ color: s.color, text: s.label }));
+  items.push({ color: '#64748b', text: `Vout min = ${fmt(c.inputs.voutMin, 2)}V` });
+  items.push({ color: '#b45309', text: `Vout nom = ${fmt(c.inputs.voutNom, 2)}V` });
+  items.push({ color: '#dc2626', text: `Vout max = ${fmt(c.inputs.voutMax, 2)}V` });
+  return items;
 }
 
 function renderLegend(id, items) {
@@ -457,10 +552,14 @@ function resultText(c) {
     ['Pmax', c.inputs.pmax, 'W'],
     ['efficiency', c.inputs.eff * 100, '%'],
     ['Vf', c.inputs.vf, 'V'],
-    ['Ns', c.inputs.nsTurns, 'turn'],
-    ['Np_calc', c.npCalc, 'turn'],
+    ['winding_mode', c.inputs.windingMode, '-'],
+    ['AL_value', c.inputs.alValue, 'nH/turn^2'],
+    ['n_target', c.nTarget, '-'],
+    ['Ns', c.nsTurns, 'turn'],
+    ['Np_calc_or_target', c.npCalc, 'turn'],
+    ['Np_from_AL_raw', Number.isFinite(c.npFromAlRaw) ? c.npFromAlRaw : '', 'turn'],
     ['Np_use', c.npUse, 'turn'],
-    ['n_use_Np_over_Ns', c.n, '-'],
+    ['n_actual_Np_over_Ns', c.n, '-'],
     ['fmin', c.inputs.fSwMinK, 'kHz'],
     ['fmax', c.inputs.fSwMaxK, 'kHz'],
     ['frH_design', c.inputs.frHDesignK, 'kHz'],
@@ -560,25 +659,280 @@ function downloadGraphCsv() {
   downloadBlob(`llc_graph_${new Date().toISOString().slice(0,10)}.csv`, makeGraphCsv(c));
 }
 
+function splitCanvasLines(ctx, text, maxWidth) {
+  const src = String(text ?? '');
+  const lines = [];
+  let line = '';
+  for (const ch of src) {
+    const test = line + ch;
+    if (ctx.measureText(test).width > maxWidth && line) {
+      lines.push(line);
+      line = ch;
+    } else {
+      line = test;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.length ? lines : [''];
+}
+
+function drawCanvasLines(ctx, lines, x, y, lineHeight) {
+  let yy = y;
+  lines.forEach(line => {
+    ctx.fillText(line, x, yy);
+    yy += lineHeight;
+  });
+  return yy;
+}
+
+function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight) {
+  return drawCanvasLines(ctx, splitCanvasLines(ctx, text, maxWidth), x, y, lineHeight);
+}
+
+function drawStepRowsOnCanvas(ctx, rows, x, y, width) {
+  const gap = 10;
+  rows.forEach(([title, body]) => {
+    ctx.font = 'bold 15px system-ui';
+    const titleLines = splitCanvasLines(ctx, title, width - 28);
+    ctx.font = '13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+    const bodyLines = splitCanvasLines(ctx, body, width - 28);
+    const cardH = 18 + titleLines.length * 20 + bodyLines.length * 18 + 14;
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.strokeStyle = '#d9e0ea';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(x, y, width, cardH, 10);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#2563eb';
+    ctx.fillRect(x, y, 4, cardH);
+
+    let yy = y + 22;
+    ctx.fillStyle = '#111827';
+    ctx.font = 'bold 15px system-ui';
+    yy = drawCanvasLines(ctx, titleLines, x + 14, yy, 20);
+    ctx.fillStyle = '#334155';
+    ctx.font = '13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+    yy = drawCanvasLines(ctx, bodyLines, x + 14, yy + 2, 18);
+    y += cardH + gap;
+  });
+  return y;
+}
+
+function estimateStepRowsHeight(ctx, rows, width) {
+  let total = 0;
+  rows.forEach(([title, body]) => {
+    ctx.font = 'bold 15px system-ui';
+    const titleLines = splitCanvasLines(ctx, title, width - 28);
+    ctx.font = '13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+    const bodyLines = splitCanvasLines(ctx, body, width - 28);
+    total += 18 + titleLines.length * 20 + bodyLines.length * 18 + 14 + 10;
+  });
+  return total;
+}
+
+
+function estimateLegendBlockHeight(items) {
+  const rows = Math.ceil(items.length / 2);
+  return 54 + rows * 28 + 40;
+}
+
+function drawLegendBlockOnCanvas(ctx, title, items, x, y, width) {
+  const height = estimateLegendBlockHeight(items);
+  ctx.fillStyle = '#f8fafc';
+  ctx.strokeStyle = '#d9e0ea';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(x, y, width, height, 12);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.fillStyle = '#111827';
+  ctx.font = 'bold 16px system-ui';
+  ctx.fillText(title, x + 18, y + 26);
+
+  const colW = (width - 36) / 2;
+  items.forEach((item, i) => {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const xx = x + 18 + col * colW;
+    const yy = y + 56 + row * 28;
+    ctx.strokeStyle = item.color;
+    ctx.lineWidth = 4;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(xx, yy - 5);
+    ctx.lineTo(xx + 32, yy - 5);
+    ctx.stroke();
+    ctx.fillStyle = '#334155';
+    ctx.font = '14px system-ui';
+    ctx.fillText(item.text, xx + 42, yy);
+  });
+
+  ctx.fillStyle = '#64748b';
+  ctx.font = '13px system-ui';
+  ctx.fillText('縦破線：fmin / frL / frH / fmax、横破線：必要GainまたはVout上下限', x + 18, y + height - 18);
+  return y + height;
+}
+
 function downloadChartPng() {
   update();
+  const c = window.latestLlcResult || calculate();
   const gain = $('gainChart');
   const vo = $('voChart');
+  const width = 1200;
+  const pad = 42;
+  const summaryRows = [
+    ['実巻数比 n', fmt(c.n, 4)],
+    ['Np / Ns', `${Math.round(c.npUse)} / ${Math.round(c.nsTurns)} turn`],
+    ['Lr / Cr / Lm', `${fmt(c.lrUse * 1e6, 3)} µH / ${fmt(c.crUse * 1e9, 3)} nF / ${fmt(c.lmUse * 1e6, 3)} µH`],
+    ['frH / frL', `${fmt(c.frHActualK, 2)} / ${fmt(c.frLActualK, 2)} kHz`],
+    ['K / Q', `${fmt(c.kActual, 3)} / ${fmt(c.qUse, 3)}`],
+    ['必要最大ゲイン', fmt(c.gReqMax, 3)],
+    ['Im_pk / Ir目安', `${fmt(c.imPk, 3)} A / ${fmt(c.iResRms, 3)} Arms`],
+    ['ZVS余裕', `${fmt(c.zvsEnergyMargin, 3)} 倍`]
+  ];
+  const stepRows = getStepRows(c);
+  const gainLegendItems = getGainLegendItems(c);
+  const voLegendItems = getVoLegendItems(c);
+
+  const measureCanvas = document.createElement('canvas');
+  const measureCtx = measureCanvas.getContext('2d');
+  const stepHeight = estimateStepRowsHeight(measureCtx, stepRows, width - pad * 2);
+  const gainLegendHeight = estimateLegendBlockHeight(gainLegendItems);
+  const voLegendHeight = estimateLegendBlockHeight(voLegendItems);
+  const summaryHeight = 110 + Math.ceil(summaryRows.length / 2) * 56 + 58;
+  const height = summaryHeight + 48 + stepHeight + 62 + gain.height + gainLegendHeight + 82 + vo.height + voLegendHeight + 64;
+
   const merged = document.createElement('canvas');
-  merged.width = Math.max(gain.width, vo.width);
-  merged.height = gain.height + vo.height + 40;
+  merged.width = width;
+  merged.height = height;
   const ctx = merged.getContext('2d');
   ctx.fillStyle = '#fff';
   ctx.fillRect(0, 0, merged.width, merged.height);
-  ctx.drawImage(gain, 0, 0);
-  ctx.drawImage(vo, 0, gain.height + 40);
+
+  ctx.fillStyle = '#111827';
+  ctx.font = 'bold 28px system-ui';
+  ctx.fillText('LLC設計結果', pad, 48);
+  ctx.font = '14px system-ui';
+  ctx.fillStyle = '#475569';
+  ctx.fillText(new Date().toLocaleString('ja-JP'), pad, 76);
+
+  let y = 110;
+  const cardW = (width - pad * 2 - 18) / 2;
+  summaryRows.forEach(([label, value], i) => {
+    const x = pad + (i % 2) * (cardW + 18);
+    const yy = y + Math.floor(i / 2) * 56;
+    ctx.fillStyle = '#f8fafc';
+    ctx.strokeStyle = '#d9e0ea';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(x, yy, cardW, 44, 10);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = '#667085';
+    ctx.font = '12px system-ui';
+    ctx.fillText(label, x + 14, yy + 17);
+    ctx.fillStyle = '#111827';
+    ctx.font = 'bold 18px system-ui';
+    ctx.fillText(String(value), x + 14, yy + 36);
+  });
+
+  y += Math.ceil(summaryRows.length / 2) * 56 + 18;
+  ctx.fillStyle = '#334155';
+  ctx.font = '14px system-ui';
+  y = wrapCanvasText(ctx, c.windingNote, pad, y, width - pad * 2, 20) + 18;
+
+  ctx.fillStyle = '#111827';
+  ctx.font = 'bold 20px system-ui';
+  ctx.fillText('STEP別の導出結果', pad, y + 24);
+  y += 42;
+  y = drawStepRowsOnCanvas(ctx, stepRows, pad, y, width - pad * 2) + 26;
+
+  ctx.fillStyle = '#111827';
+  ctx.font = 'bold 20px system-ui';
+  ctx.fillText('Gain - 周波数特性', pad, y + 26);
+  y += 42;
+  ctx.drawImage(gain, pad, y, gain.width, gain.height);
+  y += gain.height + 14;
+  y = drawLegendBlockOnCanvas(ctx, '線の情報（Gainグラフ）', gainLegendItems, pad, y, width - pad * 2) + 34;
+
+  ctx.fillStyle = '#111827';
+  ctx.font = 'bold 20px system-ui';
+  ctx.fillText('出力電圧 - 周波数特性', pad, y + 26);
+  y += 42;
+  ctx.drawImage(vo, pad, y, vo.width, vo.height);
+  y += vo.height + 14;
+  drawLegendBlockOnCanvas(ctx, '線の情報（出力電圧グラフ）', voLegendItems, pad, y, width - pad * 2);
+
   const url = merged.toDataURL('image/png');
   const a = document.createElement('a');
   a.href = url;
-  a.download = `llc_charts_${new Date().toISOString().slice(0,10)}.png`;
+  a.download = `llc_result_${new Date().toISOString().slice(0,10)}.png`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
+}
+
+function collectDesignJson() {
+  const c = window.latestLlcResult || calculate();
+  const input = {};
+  inputIds.forEach(id => {
+    const el = $(id);
+    if (!el) return;
+    input[id] = el.value;
+  });
+  return {
+    version: 'llc-tool-v2',
+    savedAt: new Date().toISOString(),
+    input,
+    result: {
+      n: c.n,
+      npUse: c.npUse,
+      nsTurns: c.nsTurns,
+      lr_uH: c.lrUse * 1e6,
+      cr_nF: c.crUse * 1e9,
+      lm_uH: c.lmUse * 1e6,
+      frH_kHz: c.frHActualK,
+      frL_kHz: c.frLActualK,
+      q: c.qUse,
+      k: c.kActual
+    }
+  };
+}
+
+function saveDesignJson() {
+  downloadBlob(
+    `llc_design_${new Date().toISOString().slice(0,10)}.json`,
+    JSON.stringify(collectDesignJson(), null, 2),
+    'application/json;charset=utf-8;'
+  );
+}
+
+function loadDesignJson(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!data.input) throw new Error('inputがありません');
+      Object.entries(data.input).forEach(([id, value]) => {
+        const el = $(id);
+        if (el) el.value = value;
+      });
+      update();
+      alert('設計JSONを読み込みました。');
+    } catch (e) {
+      console.error(e);
+      alert('設計JSONの読み込みに失敗しました。');
+    } finally {
+      event.target.value = '';
+    }
+  };
+  reader.readAsText(file);
 }
 
 async function copyResult() {
@@ -590,6 +944,7 @@ async function copyResult() {
 
 function update() {
   const c = calculate();
+  window.latestLlcResult = c;
   renderSummary(c);
   renderSteps(c);
   drawGainChart(c);
@@ -604,5 +959,7 @@ $('recalcBtn')?.addEventListener('click', update);
 $('csvBtn')?.addEventListener('click', downloadCsv);
 $('graphCsvBtn')?.addEventListener('click', downloadGraphCsv);
 $('pngBtn')?.addEventListener('click', downloadChartPng);
+$('jsonSaveBtn')?.addEventListener('click', saveDesignJson);
+$('jsonLoadInput')?.addEventListener('change', loadDesignJson);
 $('copyBtn')?.addEventListener('click', copyResult);
 update();

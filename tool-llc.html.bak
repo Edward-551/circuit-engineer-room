@@ -71,10 +71,10 @@
           <h3>STEP2：周波数条件</h3>
           <div class="grid three">
             <label>最大スイッチング周波数 f<sub>max</sub> [kHz]<input id="fSwMax" type="number" step="1" value="300"></label>
-            <label>最小スイッチング周波数 f<sub>min</sub> [kHz]<input id="fSwMin" type="number" step="1" value="130"></label>
+            <label>最小スイッチング周波数 f<sub>min</sub> [kHz]<input id="fSwMin" type="number" step="1" value="115"></label>
             <label>f<sub>rH</sub>/f<sub>rL</sub>比 [-]<input id="frRatio" type="number" step="0.05" value="2.3"></label>
             <label>f<sub>rH</sub> [kHz]<input id="frH" type="number" step="1" value="230"></label>
-            <label>グラフ下限 [kHz]<input id="plotFMin" type="number" step="1" value="80"></label>
+            <label>グラフ下限 [kHz]<input id="plotFMin" type="number" step="1" value="0"></label>
             <label>グラフ上限 [kHz]<input id="plotFMax" type="number" step="1" value="300"></label>
           </div>
           <p class="formula">K = Lm/Lr = (frH/frL)<sup>2</sup> - 1、frL = frH / (frH/frL)</p>
