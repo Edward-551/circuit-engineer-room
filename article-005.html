@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>電源設計で使う工具・消耗品まとめ | 回路エンジニアの部屋</title>
+  <meta name="description" content="スイッチング電源の試作・評価で使いやすい工具、はんだ用品、配線材、絶縁用品、部品整理用品をまとめた記事です。">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="logo" href="./index.html">回路エンジニアの部屋</a>
+      <nav class="nav" aria-label="グローバルナビゲーション">
+        <a href="./index.html">ホーム</a>
+        <a href="./tools.html">ツール</a>
+        <a href="./articles.html">記事</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container narrow">
+    <article class="article">
+      <h1 class="article-title">電源設計で使う工具・消耗品まとめ</h1>
+      <p class="article-date">2026-05-30</p>
+
+      <div class="note">
+        このページは、PFCやLLCなどのスイッチング電源を試作・評価するときに、手元にあると便利な工具や消耗品を整理したメモです。
+        今後、実際に使ってよかったものや、比較しやすい購入リンクを追加していく予定です。
+      </div>
+
+      <section>
+        <h2>まずそろえたい工具</h2>
+        <p>
+          電源回路の試作では、部品を交換しながら評価する場面が多いので、はんだ付け・取り外し・配線・固定がしやすい工具があると作業がかなり楽になります。
+        </p>
+
+        <div class="tool-checklist">
+          <div>
+            <h3>温調はんだごて</h3>
+            <p>チップ部品からリード部品まで使う基本工具です。電源基板では銅箔が広い箇所も多いので、温度安定性とこて先の選択肢が重要です。</p>
+          </div>
+          <div>
+            <h3>ホットエア・リワーク</h3>
+            <p>FET、IC、シャント抵抗、セラミックコンデンサなどを交換するときに便利です。周辺部品を飛ばさないよう風量調整も大事です。</p>
+          </div>
+          <div>
+            <h3>圧着工具</h3>
+            <p>評価用ハーネスやコネクタを作るときに使います。コンタクトごとに適合工具が違うため、無理に汎用品だけで済ませない方が安定します。</p>
+          </div>
+          <div>
+            <h3>拡大鏡・実体顕微鏡</h3>
+            <p>半田ブリッジ、クラック、チップ部品の浮き、FET周辺の異常確認に使います。高密度基板ではかなり重要です。</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>消耗品・補助材料</h2>
+        <p>
+          評価を始めると、工具本体よりも消耗品が足りなくなることが多いです。
+          とくに高電圧・大電流の電源では、絶縁、固定、放熱、配線材の選び方も大事になります。
+        </p>
+
+        <ul class="compact-list">
+          <li>はんだ、フラックス、吸い取り線</li>
+          <li>耐熱テープ、ポリイミドテープ、絶縁シート</li>
+          <li>熱伝導シート、シリコングリス、放熱シート</li>
+          <li>ジャンパ線、テフロン線、太めの評価用配線</li>
+          <li>丸端子、ファストン端子、圧着端子、コネクタ</li>
+          <li>部品ケース、ラベル、抵抗・コンデンサ整理用品</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>電源評価で気をつけたい工具選び</h2>
+        <p>
+          電源回路では、ただ作業できればよいだけでなく、安全に評価できることが重要です。
+          一次側高電圧、突入電流、大電流出力、発熱部品を扱うため、工具や配線材の定格も確認します。
+        </p>
+
+        <div class="equation">
+          確認例：耐圧、電流容量、耐熱温度、絶縁距離、端子の適合電線サイズ、圧着品質
+        </div>
+      </section>
+
+      <section>
+        
+
+        <div class="affiliate-box">
+          <h3>今後の紹介候補</h3>
+          <ul>
+            <li>温調はんだごて・交換こて先</li>
+            <li>ホットエア・リワーク用品</li>
+            <li>圧着工具・コネクタ・評価用ハーネス材料</li>
+            <li>ポリイミドテープ、絶縁シート、熱伝導シート</li>
+            <li>部品ケース、ラベル、作業マット</li>
+          </ul>
+          <p class="affiliate-note">
+            ※リンク追加時は、仕様・定格・販売条件を確認したうえで掲載します。
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <h2>まとめ</h2>
+        <p>
+          測定器だけでなく、工具と消耗品がそろっていると、試作・改造・評価のスピードがかなり上がります。
+          特に電源回路では、安全に測れること、確実に接続できること、発熱や絶縁に配慮できることを優先したいです。
+        </p>
+      </section>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p>© <span id="currentYear"></span> 回路エンジニアの部屋</p>
+      <nav class="footer-nav" aria-label="フッターナビゲーション">
+        <a href="./profile.html">運営者情報</a>
+        <a href="./privacy.html">プライバシーポリシー・免責事項</a>
+        <a href="./contact.html">お問い合わせ</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="./script.js"></script>
+</body>
+</html>

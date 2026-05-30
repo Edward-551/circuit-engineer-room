@@ -1089,3 +1089,27 @@ img {
     grid-template-columns: 1fr;
   }
 }
+
+
+.affiliate-link-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.affiliate-link-list li {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  color: var(--text-soft);
+}
+
+@media (max-width: 720px) {
+  .affiliate-link-list {
+    grid-template-columns: 1fr;
+  }
+}
