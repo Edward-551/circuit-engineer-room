@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>電源設計で使う測定器まとめ | 回路エンジニアの部屋</title>
+  <meta name="description" content="PFCやLLCなどのスイッチング電源評価で使う測定器を、最初にそろえたいもの・あると便利なものに分けて整理した記事です。">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="logo" href="./index.html">回路エンジニアの部屋</a>
+      <nav class="nav" aria-label="グローバルナビゲーション">
+        <a href="./index.html">ホーム</a>
+        <a href="./tools.html">ツール</a>
+        <a href="./articles.html">記事</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container narrow">
+    <article class="article">
+      <h1 class="article-title">電源設計で使う測定器まとめ</h1>
+      <p class="article-date">2026-05-30</p>
+
+      <div class="note">
+        このページは、PFCやLLCなどのスイッチング電源を評価するときに使う測定器を、
+        自分用のチェックリストとして整理したものです。今後、実際に使ってよかった機材や参考資料へのリンクも追加していきます。
+      </div>
+
+      <section>
+        <h2>まず必要になりやすい測定器</h2>
+        <p>
+          スイッチング電源の評価では、単に出力電圧を見るだけでなく、
+          入力電力、効率、スイッチング波形、温度、保護動作をまとめて確認する必要があります。
+        </p>
+
+        <div class="tool-checklist">
+          <div>
+            <h3>オシロスコープ</h3>
+            <p>Vds、Vgs、スイッチングノード、リップルなどの波形確認に使います。電源評価では帯域だけでなく、プローブや絶縁の考え方も重要です。</p>
+          </div>
+          <div>
+            <h3>差動プローブ</h3>
+            <p>一次側の高電圧波形や、GND基準で直接測れない箇所を確認するために使います。耐圧と帯域の確認が必要です。</p>
+          </div>
+          <div>
+            <h3>電流プローブ</h3>
+            <p>PFCインダクタ電流、LLC共振電流、FET電流の確認に便利です。波形の位相やピーク電流確認で役立ちます。</p>
+          </div>
+          <div>
+            <h3>電子負荷</h3>
+            <p>定電流・定抵抗・ステップ負荷などで、出力の安定性や過電流保護を確認できます。</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>効率確認で使うもの</h2>
+        <p>
+          電源の効率は、入力電力と出力電力を正しく測らないと大きくズレます。
+          特に軽負荷や無負荷では、測定器の分解能や配線抵抗の影響も無視しにくくなります。
+        </p>
+
+        <ul class="compact-list">
+          <li>パワーメータ：AC入力電力、PF、入力電流、無負荷電力の確認</li>
+          <li>DMM：出力電圧、シャント電圧、補助電源電圧の確認</li>
+          <li>シャント抵抗：出力電流を高精度に測りたいときに使用</li>
+          <li>温度計・熱電対：FET、ダイオード、トランス、コイル、抵抗の温度確認</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>LLC評価で特に見たい波形</h2>
+        <p>
+          LLCでは、ゲイン特性だけでなく、ZVSできているか、容量性領域に入っていないか、
+          共振電流が想定より大きくなっていないかを確認したいです。
+        </p>
+
+        <div class="equation">
+          確認例：Vgs、Vds、スイッチングノード、共振電流、出力リップル、一次側電流、二次側整流波形
+        </div>
+
+        <p>
+          特に高電圧側の波形を見るときは、プローブのGND接続ミスが危険です。
+          差動プローブや絶縁測定の使い方を確認したうえで評価します。
+        </p>
+      </section>
+
+      <section>
+        <h2>今後リンクを追加したいもの</h2>
+
+
+        <div class="affiliate-box">
+          <h3>今後の紹介候補</h3>
+          <ul>
+            <li>初心者向けDMM</li>
+            <li>スイッチング電源評価向けオシロスコープ</li>
+            <li>差動プローブ・電流プローブ</li>
+            <li>電子負荷</li>
+            <li>パワーエレクトロニクス、スイッチング電源の参考書</li>
+          </ul>
+          <p class="affiliate-note">
+            ※リンク追加時は、実際の仕様・価格・販売条件を確認したうえで掲載します。
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <h2>まとめ</h2>
+        <p>
+          電源設計の評価では、計算ツールだけでなく、実測で確認する環境づくりが重要です。
+          まずは効率、温度、スイッチング波形、安全に測れるプローブ環境を優先して整えるのがよさそうです。
+        </p>
+      </section>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p>© <span id="currentYear"></span> 回路エンジニアの部屋</p>
+      <nav class="footer-nav" aria-label="フッターナビゲーション">
+        <a href="./profile.html">運営者情報</a>
+        <a href="./privacy.html">プライバシーポリシー・免責事項</a>
+        <a href="./contact.html">お問い合わせ</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="./script.js"></script>
+</body>
+</html>

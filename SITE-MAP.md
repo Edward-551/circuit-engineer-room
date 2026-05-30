@@ -43,3 +43,5 @@ LLC設計ツールは `llc-tool.css` を単独で使う構成です。動いて�
 - `profile.html`：運営者情報
 - `privacy.html`：プライバシーポリシー・免責事項
 - `contact.html`：お問い合わせ
+
+- `article-004.html` : 電源設計で使う測定器まとめ
