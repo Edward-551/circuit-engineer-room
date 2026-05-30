@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>電源設計で使う部品購入先の使い分け | 回路エンジニアの部屋</title>
+  <meta name="description" content="スイッチング電源の試作・評価で使う電子部品、工具、測定器、消耗品の購入先をどう使い分けるかを整理した記事です。">
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="logo" href="./index.html">回路エンジニアの部屋</a>
+      <nav class="nav" aria-label="グローバルナビゲーション">
+        <a href="./index.html">ホーム</a>
+        <a href="./tools.html">ツール</a>
+        <a href="./articles.html">記事</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container narrow">
+    <article class="article">
+      <h1 class="article-title">電源設計で使う部品購入先の使い分け</h1>
+      <p class="article-date">2026-05-30</p>
+
+      <div class="note">
+        このページは、PFCやLLCなどのスイッチング電源を試作するときに、部品・工具・測定器をどこで探すかを整理したメモです。
+        今後、アフィリエイトリンクを追加する場合も、単にリンクを並べるのではなく、用途ごとに選びやすい形にしていきます。
+      </div>
+
+      <section>
+        <h2>購入先はひとつに決めなくてよい</h2>
+        <p>
+          電源設計では、半導体、磁性部品、コンデンサ、抵抗、コネクタ、工具、測定器まで必要なものがかなり広いです。
+          そのため、ひとつの通販サイトだけで全部そろえようとすると、在庫、価格、納期、最小購入数のどこかで困ることがあります。
+        </p>
+        <p>
+          基本は、部品の種類ごとに購入先を分ける考え方が使いやすいです。
+        </p>
+
+        <div class="select-grid">
+          <div>
+            <h3>半導体・IC</h3>
+            <p>型番指定で探すことが多いので、メーカー型番、在庫数、データシート、代替品の確認がしやすいサイトが便利です。</p>
+          </div>
+          <div>
+            <h3>コンデンサ・抵抗</h3>
+            <p>定格電圧、許容差、温度特性、サイズ、リップル電流などで絞り込みやすいところを優先します。</p>
+          </div>
+          <div>
+            <h3>コネクタ・端子</h3>
+            <p>ハウジング、コンタクト、適合電線、圧着工具の組み合わせを確認できることが重要です。</p>
+          </div>
+          <div>
+            <h3>工具・消耗品</h3>
+            <p>細かい仕様よりも、入手性、価格、交換部品、レビュー、すぐ届くかを重視することが多いです。</p>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>試作でよく見るポイント</h2>
+        <p>
+          特にスイッチング電源では、安いかどうかだけでなく、評価中にすぐ交換できるか、同じものを再購入できるかも大事です。
+          量産前提ではない試作でも、後から同じ条件で再評価できるように、型番と購入先は残しておきたいです。
+        </p>
+
+        <ul class="compact-list">
+          <li>メーカー型番が明確か</li>
+          <li>データシートにすぐアクセスできるか</li>
+          <li>定格電圧・電流・温度・サイズで絞り込めるか</li>
+          <li>在庫数と納期が確認しやすいか</li>
+          <li>最小購入数が試作に合っているか</li>
+          <li>同じ型番をあとで再購入しやすいか</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>電源部品ごとの探し方</h2>
+
+        <div class="buying-table">
+          <div class="buying-row buying-head">
+            <div>部品</div>
+            <div>見るポイント</div>
+            <div>注意点</div>
+          </div>
+          <div class="buying-row">
+            <div>FET / ダイオード</div>
+            <div>耐圧、Rds(on)、Qg、損失、パッケージ、熱抵抗</div>
+            <div>同じ耐圧でも駆動条件や熱条件で使いやすさが変わる</div>
+          </div>
+          <div class="buying-row">
+            <div>電解コンデンサ</div>
+            <div>容量、耐圧、リップル電流、寿命、サイズ</div>
+            <div>温度とリップル電流で寿命が大きく変わる</div>
+          </div>
+          <div class="buying-row">
+            <div>セラミックコンデンサ</div>
+            <div>耐圧、容量、温度特性、DCバイアス、サイズ</div>
+            <div>高耐圧品は実効容量が下がることがある</div>
+          </div>
+          <div class="buying-row">
+            <div>電流検出抵抗</div>
+            <div>抵抗値、定格電力、温度係数、実装サイズ</div>
+            <div>発熱とランドパターンの影響を見ておきたい</div>
+          </div>
+          <div class="buying-row">
+            <div>コネクタ</div>
+            <div>定格電流、極数、ピッチ、適合電線、圧着工具</div>
+            <div>コンタクトとハウジングの組み合わせミスに注意</div>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2>今後リンクを入れたい場所</h2>
+        
+
+        <div class="affiliate-box">
+          <h3>リンク候補</h3>
+          <ul class="affiliate-link-list">
+            <li>電子部品通販サイト</li>
+            <li>工具・消耗品の通販サイト</li>
+            <li>測定器・電子負荷の購入先</li>
+            <li>電源設計の参考書</li>
+          </ul>
+          <p class="affiliate-note">
+            ※リンク追加時は、広告であることが分かる表記を入れ、仕様確認は必ず各販売ページ・メーカー資料で行う形にします。
+          </p>
+        </div>
+      </section>
+
+      <section>
+        <h2>まとめ</h2>
+        <p>
+          部品購入先は、安さだけでなく、型番の探しやすさ、在庫、納期、データシート確認、再購入しやすさで使い分けると便利です。
+          電源設計では部品の定格確認が重要なので、購入リンクを置く場合も、選定ポイントとセットで整理していきたいです。
+        </p>
+      </section>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <p>© <span id="currentYear"></span> 回路エンジニアの部屋</p>
+      <nav class="footer-nav" aria-label="フッターナビゲーション">
+        <a href="./profile.html">運営者情報</a>
+        <a href="./privacy.html">プライバシーポリシー・免責事項</a>
+        <a href="./contact.html">お問い合わせ</a>
+      </nav>
+    </div>
+  </footer>
+
+  <script src="./script.js"></script>
+</body>
+</html>
