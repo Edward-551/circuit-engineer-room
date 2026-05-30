@@ -49,3 +49,8 @@ LLC設計ツールは `llc-tool.css` を単独で使う構成です。動いて�
 - `article-005.html` : 電源設計で使う工具・消耗品まとめ
 
 - `article-006.html` : 電源設計で使う部品購入先の使い分け
+
+
+## Affiliate preparation
+- article-004.html / article-005.html / article-006.html にAmazonリンク準備枠を追加
+- privacy.html にAmazonアソシエイト表記を追加
