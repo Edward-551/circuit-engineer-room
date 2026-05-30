@@ -1046,7 +1046,7 @@ img {
 .field-help {
   display: block;
   margin-top: 6px;
-  color: var(--text-muted);
+  color: var(--muted);
   font-size: 0.78rem;
   line-height: 1.5;
 }
@@ -1081,7 +1081,7 @@ img {
 
 .affiliate-note {
   font-size: 0.9rem;
-  color: var(--text-muted);
+  color: var(--muted);
 }
 
 @media (max-width: 720px) {
@@ -1195,66 +1195,66 @@ img {
 }
 
 
-/* Amazon / PR link preparation */
-.amazon-pr-box {
-  margin: 24px 0;
-  padding: 20px;
-  border: 1px solid #bfdbfe;
-  border-left: 5px solid var(--accent);
-  border-radius: 16px;
+/* Product / affiliate link boxes */
+.product-box {
   background: #ffffff;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+  border: 1px solid #dbeafe;
+  border-left: 5px solid #f59e0b;
+  border-radius: 16px;
+  padding: 18px;
+  margin: 24px 0;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
 }
 
-.amazon-pr-box h3 {
-  margin: 4px 0 8px;
+.product-box h3 {
+  margin-top: 4px;
   color: #0f172a;
 }
 
-.pr-label {
+.ad-label {
   display: inline-block;
   margin: 0 0 8px;
-  padding: 4px 10px;
+  padding: 3px 10px;
   border-radius: 999px;
-  background: var(--accent-bg);
-  color: var(--accent);
+  background: #fff7ed;
+  color: #9a3412;
+  border: 1px solid #fed7aa;
   font-size: 0.78rem;
-  font-weight: 800;
-  line-height: 1.3;
+  font-weight: 700;
 }
 
-.product-link-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.product-links {
+  display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   margin: 16px 0;
 }
 
 .product-link {
-  display: block;
-  padding: 11px 13px;
-  border: 1px solid var(--line-strong);
-  border-radius: 12px;
-  background: #f8fafc;
-  color: var(--accent);
-  font-weight: 800;
-  text-align: center;
-  transition: transform 0.2s ease, background 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 42px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #ffffff;
+  text-decoration: none;
+  font-weight: 700;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
 }
 
 .product-link:hover {
   transform: translateY(-1px);
-  background: #ffffff;
-}
-
-.product-link.is-placeholder {
-  color: var(--text-muted);
-  border-style: dashed;
-  cursor: not-allowed;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.22);
 }
 
 @media (max-width: 720px) {
-  .product-link-grid {
-    grid-template-columns: 1fr;
+  .product-links {
+    flex-direction: column;
+  }
+
+  .product-link {
+    width: 100%;
   }
 }
