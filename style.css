@@ -352,6 +352,69 @@ img {
 .footer-inner {
   color: var(--text-muted);
   font-size: 0.92rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.footer-inner p {
+  margin: 0;
+}
+
+.footer-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.footer-nav a {
+  color: var(--text-soft);
+  font-weight: 700;
+}
+
+.footer-nav a:hover {
+  color: var(--accent);
+}
+
+.legal-layout {
+  display: grid;
+  gap: 18px;
+}
+
+.legal-card {
+  background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  padding: 26px;
+  box-shadow: var(--shadow);
+}
+
+.legal-card h2 {
+  margin-top: 0;
+  color: #0f172a;
+}
+
+.legal-card h3 {
+  margin-top: 24px;
+  color: #0f172a;
+}
+
+.legal-card p,
+.legal-card li {
+  color: var(--text-soft);
+}
+
+.legal-card ul {
+  padding-left: 1.25em;
+}
+
+@media (max-width: 680px) {
+  .footer-inner {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 /* tool page common */
