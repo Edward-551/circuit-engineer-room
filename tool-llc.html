@@ -89,6 +89,9 @@
             <label>設計Q 手入力 [-]<input id="qManual" type="number" step="0.01" placeholder="空欄なら推奨Q"></label>
             <label>出力電力リスト [W]<input id="powerList" type="text" value="40,80,160,240,320,400,480,520,560"></label>
             <label>Gain軸最大 [-]<input id="gainYMax" type="number" step="0.1" value="2.0"></label>
+            <label>Vout軸最小 [V]<input id="voutYMin" type="number" step="0.1" placeholder="Auto"></label>
+            <label>Vout軸最大 [V]<input id="voutYMax" type="number" step="0.1" placeholder="Auto"></label>
+            <label>実測Vout-f 負荷率リスト [%]<input id="measuredLoadList" type="text" value="10,25,50,100" placeholder="例：5,10,25,50,75,100"></label>
           </div>
           <p class="formula">Rac,p = n² × 8Rout/π²、Z0 = Q × Rac,p、Lr = Z0/(2πfrH)、Cr = 1/{(2πfrH)²Lr}</p>
         </div>
@@ -98,9 +101,30 @@
           <div class="grid three">
             <label>実L<sub>r</sub> [µH]<input id="lrActual" type="number" step="0.1" placeholder="推奨値を使用"></label>
             <label>実C<sub>r</sub> [nF]<input id="crActual" type="number" step="0.1" placeholder="推奨値を使用"></label>
-            <label>実L<sub>m</sub> [µH]<input id="lmActual" type="number" step="1" placeholder="推奨値を使用"></label>
+            <label class="check-label"><input id="lmManualEnable" type="checkbox"> L<sub>m</sub>手動入力を使う</label>
+            <label>手動L<sub>m</sub> [µH]<input id="lmActual" type="number" step="1" placeholder="例：150"></label>
           </div>
-          <p class="formula">実値入力後、frH/frL/K/Q/特性インピーダンスを再計算します。</p>
+          <p class="formula">実値入力後、frH/frL/K/Q/特性インピーダンスを再計算します。Lm手動入力を有効にすると、Lr/CrはそのままにK・frL・fpeak・判定を再計算します。</p>
+        </div>
+
+        <div class="step-card measure-card">
+          <h3>STEP4-2：実測モード</h3>
+          <div class="grid three">
+            <label class="check-label"><input id="measuredMode" type="checkbox"> 実測値だけで逆算する</label>
+            <label>実測L<sub>r</sub> [µH]<input id="measuredLr" type="number" step="0.01" placeholder="例：14.5"></label>
+            <label>実測L<sub>m</sub> [µH]<input id="measuredLm" type="number" step="0.1" placeholder="例：150"></label>
+            <label>実測C<sub>r</sub> [nF]<input id="measuredCr" type="number" step="0.1" placeholder="例：82"></label>
+            <label>実測巻数比 n [-]<input id="measuredN" type="number" step="0.01" placeholder="不明なら上の巻線設定を使用"></label>
+            <label>PFC電圧 V<sub>PFC</sub> [V]<input id="measuredVpfc" type="number" step="1" placeholder="例：390"></label>
+            <label>出力電圧 V<sub>o</sub> [V]<input id="measuredVo" type="number" step="0.1" placeholder="例：12"></label>
+            <label>出力電力 P<sub>o</sub> [W]<input id="measuredPo" type="number" step="1" placeholder="例：600"></label>
+            <label>整流方式<select id="measuredRectifier"><option value="ct">センタータップ</option><option value="bridge">ブリッジ整流</option><option value="sr">同期整流/損失小</option></select></label>
+            <label>整流損失 V<sub>F</sub> [V]<input id="measuredVf" type="number" step="0.01" placeholder="未入力なら仕様VF"></label>
+            <label>実測f<sub>sw(min)</sub> [kHz]<input id="measuredFswMin" type="number" step="0.1" placeholder="任意：最大負荷時など"></label>
+            <label>実測f<sub>sw(max)</sub> [kHz]<input id="measuredFswMax" type="number" step="0.1" placeholder="任意：軽負荷時など"></label>
+          </div>
+          <p class="formula">実測Lr/Lm/CrからfrH・frL・Kを逆算し、Vpfc/Vo/Po/nからRac・Q・必要Gain・fpeak・Gain曲線を表示します。負荷率リストでVout-fの表示負荷を任意に変更できます。</p>
+          <p class="hint">※ 二次短絡でLr、二次開放でLp=Lr+Lmを測った場合は、Lm=Lp−Lrを入力してください。</p>
         </div>
 
         <div class="step-card">
@@ -111,6 +135,19 @@
             <label>設定デッドタイム [ns]<input id="deadTime" type="number" step="5" value="150"></label>
           </div>
           <p class="formula">Im,pk ≈ Vinmax / (8Lm fchk)、Iload,pri ≈ Pin / Vin基本波rms、Ir ≈ √(Iload² + Im,rms²)</p>
+        </div>
+
+
+        <div class="step-card">
+          <h3>STEP6：巻線電流・リッツ線目安</h3>
+          <div class="grid three">
+            <label>一次側 電流密度 [A/mm²]<input id="jPri" type="number" step="0.1" value="5.0"></label>
+            <label>二次側 電流密度 [A/mm²]<input id="jSec" type="number" step="0.1" value="6.0"></label>
+            <label>一次側 素線径 [mm]<input id="strandPri" type="number" step="0.01" value="0.10"></label>
+            <label>二次側 素線径 [mm]<input id="strandSec" type="number" step="0.01" value="0.10"></label>
+          </div>
+          <p class="formula">k<sub>c</sub>=√{Lm/(Lm+Lr)}、n<sub>eq</sub>=k<sub>c</sub>n、I<sub>reso</sub>≈πIo/(n<sub>eq</sub>2√2)、I<sub>pri</sub>≈√(I<sub>Lm</sub>²+I<sub>reso</sub>²)</p>
+          <p class="hint">※ 漏れインダクタンス利用型の巻線電流見積り式です。外付けLr構成では目安として確認してください。</p>
         </div>
 
         <div class="step-card">
@@ -134,17 +171,35 @@
         <h2>STEP別の導出結果</h2>
         <div id="stepResults" class="results-list"></div>
 
-        <h2>Gain - 周波数特性</h2>
-        <div class="chart-wrap">
-          <canvas id="gainChart" width="900" height="520"></canvas>
-        </div>
-        <div id="gainLegend" class="legend"></div>
+        <div id="designChartsSection">
+          <h2>設計モード専用：Gain - 周波数特性</h2>
+          <div class="chart-wrap">
+            <canvas id="gainChart" width="900" height="520"></canvas>
+          </div>
+          <div id="gainLegend" class="legend"></div>
 
-        <h2 class="chart-heading">出力電圧 - 周波数特性</h2>
-        <div class="chart-wrap">
-          <canvas id="voChart" width="900" height="520"></canvas>
+          <h2 class="chart-heading">出力電圧 - 周波数特性</h2>
+          <div class="chart-wrap">
+            <canvas id="voChart" width="900" height="520"></canvas>
+          </div>
+          <div id="voLegend" class="legend"></div>
         </div>
-        <div id="voLegend" class="legend"></div>
+
+        <div id="measuredAnalysisSection" style="display:none;" hidden>
+          <h2 class="chart-heading">実測モード専用：Gain - 周波数特性</h2>
+          <p class="formula">Vpfc/Vo/Po/nから求めたQでGain曲線を描き、必要Gain線と実測fsw範囲を重ねます。</p>
+          <div class="chart-wrap">
+            <canvas id="measuredGainChart" width="900" height="520"></canvas>
+          </div>
+          <div id="measuredGainLegend" class="legend"></div>
+
+          <h2 class="chart-heading">実測モード専用：出力電圧 - 周波数特性</h2>
+          <p class="formula">実測Vpfcと巻数比から、負荷率リストで指定した各負荷率のVout-f特性を表示します。縦軸はVout軸最小/最大で変更できます。</p>
+          <div class="chart-wrap">
+            <canvas id="measuredVoChart" width="900" height="520"></canvas>
+          </div>
+          <div id="measuredVoLegend" class="legend"></div>
+        </div>
       </section>
     </div>
   </main>
